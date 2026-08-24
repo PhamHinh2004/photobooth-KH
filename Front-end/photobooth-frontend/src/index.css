@@ -1,0 +1,214 @@
+/* ===========================
+   Global Reset & Base
+=========================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --color-primary: #e94560;
+  --color-primary-dark: #c73652;
+  --color-bg-dark: #0f0e17;
+  --color-bg-card: #1a1a2e;
+  --color-accent: #16213e;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===========================
+   Auth Layout
+=========================== */
+.auth-layout {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f0e17 0%, #1a1a2e 40%, #16213e 70%, #0f3460 100%);
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+}
+
+/* Decorative background circles */
+.auth-layout::before {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(233, 69, 96, 0.15) 0%, transparent 70%);
+  top: -100px;
+  right: -100px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.auth-layout::after {
+  content: '';
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(79, 172, 254, 0.1) 0%, transparent 70%);
+  bottom: -50px;
+  left: -50px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.auth-card-wrapper {
+  width: 100%;
+  max-width: 440px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Brand Header */
+.auth-brand {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.auth-brand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, rgba(233, 69, 96, 0.2), rgba(233, 69, 96, 0.05));
+  border: 1px solid rgba(233, 69, 96, 0.3);
+  border-radius: 20px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(10px);
+}
+
+.auth-brand-icon svg {
+  color: #e94560;
+  stroke: #e94560;
+}
+
+.auth-brand-name {
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ffffff, #e94560);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.auth-brand-tagline {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+
+/* Auth Card */
+.auth-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Override Ant Design inside auth card */
+.auth-card .ant-typography h3 {
+  color: #ffffff !important;
+}
+
+.auth-card .ant-typography {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.auth-card .ant-typography.ant-typography-secondary {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.auth-card .ant-form-item-label > label {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.auth-card .ant-input-affix-wrapper,
+.auth-card .ant-input {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: white !important;
+}
+
+.auth-card .ant-input-affix-wrapper:hover,
+.auth-card .ant-input:hover {
+  border-color: #e94560 !important;
+}
+
+.auth-card .ant-input-affix-wrapper-focused,
+.auth-card .ant-input:focus {
+  border-color: #e94560 !important;
+  box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.2) !important;
+}
+
+.auth-card .ant-input::placeholder {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.auth-card .anticon {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.auth-card .ant-btn-primary {
+  background: linear-gradient(135deg, #e94560, #c73652) !important;
+  border: none !important;
+  height: 44px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+.auth-card .ant-btn-primary:hover {
+  background: linear-gradient(135deg, #f05070, #e94560) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(233, 69, 96, 0.4) !important;
+}
+
+.auth-card a {
+  color: #e94560;
+}
+
+.auth-card a:hover {
+  color: #f05070;
+}
+
+/* ===========================
+   Sidebar Logo
+=========================== */
+.sider-logo {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.sider-logo-text {
+  color: white;
+  font-weight: 700;
+  font-size: 15px;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #ffffff, #e94560);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
