@@ -4,64 +4,109 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
+import { Repository } from 'typeorm';
+import { AccountsService } from '../accounts/accounts.service';
+import { Account } from '../accounts/entities/account.entity';
+import { Customer } from '../customers/entities/customer.entity';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { SafeUser, User } from './interfaces/user.interface';
 
-// TODO: Thay thế bằng UserService + UserRepository thực khi có entity User
 @Injectable()
 export class AuthService {
-  // Tạm thời dùng in-memory, thay bằng TypeORM repository sau
-  private readonly users: User[] = [];
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly accountsService: AccountsService,
+    @InjectRepository(Account)
+    private readonly accountRepository: Repository<Account>,
+    @InjectRepository(Customer)
+    private readonly customerRepository: Repository<Customer>,
+  ) {}
 
-  constructor(private readonly jwtService: JwtService) {}
+  async validateUser(identifier: string, pass: string): Promise<Account | null> {
+    const account = await this.accountRepository
+      .createQueryBuilder('account')
+      .addSelect('account.password')
+      .leftJoinAndSelect('account.customer', 'customer')
+      .where('account.email = :identifier OR account.username = :identifier', {
+        identifier,
+      })
+      .getOne();
 
-  async validateUser(email: string, password: string): Promise<SafeUser | null> {
-    const user = this.users.find((u) => u.email === email);
-    if (!user) return null;
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return null;
-
-    const { password: _pwd, ...result } = user;
-    return result;
-  }
-
-  async login(dto: LoginDto): Promise<{ accessToken: string }> {
-    const user = await this.validateUser(dto.email, dto.password);
-    if (!user) {
-      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+    if (!account || !account.isActive) {
+      return null;
     }
 
-    return this.generateTokens(user);
+    const isMatch = await bcrypt.compare(pass, account.password);
+    if (!isMatch) {
+      return null;
+    }
+
+    delete (account as Partial<Account>).password;
+    return account;
   }
 
-  async register(dto: RegisterDto): Promise<{ user: SafeUser; accessToken: string }> {
-    const exists = this.users.find((u) => u.email === dto.email);
-    if (exists) {
+  async login(dto: LoginDto): Promise<{ accessToken: string; account: Account }> {
+    const account = await this.validateUser(dto.email, dto.password);
+    if (!account) {
+      throw new UnauthorizedException('Email/Username hoặc mật khẩu không chính xác');
+    }
+
+    const tokens = this.generateTokens(account);
+    return {
+      ...tokens,
+      account,
+    };
+  }
+
+  async register(dto: RegisterDto): Promise<{ accessToken: string; account: Account }> {
+    const existingEmail = await this.accountRepository.findOne({
+      where: { email: dto.email },
+    });
+    if (existingEmail) {
       throw new ConflictException('Email đã được sử dụng');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const newUser: User = {
-      id: Date.now().toString(),
-      email: dto.email,
-      fullName: dto.fullName,
-      password: hashedPassword,
-    };
+    const username = dto.username || dto.email.split('@')[0] + Math.floor(1000 + Math.random() * 9000);
+    const existingUsername = await this.accountRepository.findOne({
+      where: { username },
+    });
+    if (existingUsername) {
+      throw new ConflictException('Tên người dùng (username) đã tồn tại');
+    }
 
-    this.users.push(newUser);
-    const { password: _pwd, ...result } = newUser;
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+    const newAccount = this.accountRepository.create({
+      email: dto.email,
+      username,
+      password: hashedPassword,
+    });
+
+    const savedAccount = await this.accountRepository.save(newAccount);
+
+    const newCustomer = this.customerRepository.create({
+      accountId: savedAccount.id,
+      fullName: dto.fullName,
+    });
+    await this.customerRepository.save(newCustomer);
+
+    const accountWithRelation = await this.accountsService.findOne(savedAccount.id);
+    const tokens = this.generateTokens(accountWithRelation);
 
     return {
-      user: result,
-      ...this.generateTokens(result),
+      ...tokens,
+      account: accountWithRelation,
     };
   }
 
-  private generateTokens(user: SafeUser): { accessToken: string } {
-    const payload = { sub: user.id, email: user.email };
+  private generateTokens(account: Account): { accessToken: string } {
+    const payload = {
+      sub: account.id,
+      email: account.email,
+      role: account.role,
+    };
     return {
       accessToken: this.jwtService.sign(payload),
     };
