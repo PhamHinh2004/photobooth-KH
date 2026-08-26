@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import {
   ConflictException,
   Injectable,
@@ -19,6 +20,13 @@ export class CustomersService {
     private readonly accountRepository: Repository<Account>,
   ) {}
 
+  /**
+   * get all customers with pagination and optional search
+   * @param page 
+   * @param limit 
+   * @param search 
+   * @returns 
+   */
   async findAll(page = 1, limit = 10, search?: string) {
     const query = this.customerRepository
       .createQueryBuilder('customer')
@@ -47,6 +55,11 @@ export class CustomersService {
     };
   }
 
+  /**
+   * get customer by id
+   * @param id 
+   * @returns 
+   */
   async findOne(id: string): Promise<Customer> {
     const customer = await this.customerRepository.findOne({
       where: { id },
@@ -54,12 +67,19 @@ export class CustomersService {
     });
 
     if (!customer) {
-      throw new NotFoundException(`Hồ sơ khách hàng với ID ${id} không tồn tại`);
+      throw new NotFoundException(
+        `Hồ sơ khách hàng với ID ${id} không tồn tại`,
+      );
     }
 
     return customer;
   }
 
+  /**
+   * 
+   * @param accountId 
+   * @returns 
+   */
   async findByAccountId(accountId: string): Promise<Customer> {
     const customer = await this.customerRepository.findOne({
       where: { accountId },
@@ -67,19 +87,28 @@ export class CustomersService {
     });
 
     if (!customer) {
-      throw new NotFoundException(`Không tìm thấy thông tin khách hàng cho tài khoản ${accountId}`);
+      throw new NotFoundException(
+        `Không tìm thấy thông tin khách hàng cho tài khoản ${accountId}`,
+      );
     }
 
     return customer;
   }
 
-  async create(dto: CreateCustomerDto): Promise<Customer> {
+  /**
+   * 
+   * @param dto 
+   * @returns 
+   */
+  async create(dto: CreateCustomerDto): Promise<{message: string}> {
     const account = await this.accountRepository.findOne({
       where: { id: dto.accountId },
     });
 
     if (!account) {
-      throw new NotFoundException(`Tài khoản với ID ${dto.accountId} không tồn tại`);
+      throw new NotFoundException(
+        `Tài khoản với ID ${dto.accountId} không tồn tại`,
+      );
     }
 
     const existingCustomer = await this.customerRepository.findOne({
@@ -87,7 +116,9 @@ export class CustomersService {
     });
 
     if (existingCustomer) {
-      throw new ConflictException('Tài khoản này đã được liên kết với một hồ sơ khách hàng');
+      throw new ConflictException(
+        'Tài khoản này đã được liên kết với một hồ sơ khách hàng',
+      );
     }
 
     const customer = this.customerRepository.create({
@@ -98,7 +129,8 @@ export class CustomersService {
       gender: dto.gender,
     });
 
-    return this.customerRepository.save(customer);
+    await this.customerRepository.save(customer);
+    return { message: 'Tạo hồ sơ khách hàng thành công' };
   }
 
   async update(id: string, dto: UpdateCustomerDto): Promise<Customer> {

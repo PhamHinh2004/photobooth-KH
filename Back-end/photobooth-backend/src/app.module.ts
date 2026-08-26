@@ -11,7 +11,7 @@ import { AllExceptionsFilter } from './exception/all-exceptions.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { DatabaseModule } from './database/database.module';
-import { LoggerMiddleware } from './middleware/logger.middleware';
+import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { AccountsModule } from './modules/accounts/accounts.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CustomersModule } from './modules/customers/customers.module';

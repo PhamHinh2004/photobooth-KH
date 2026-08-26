@@ -12,33 +12,33 @@ import { Customer } from '../../customers/entities/customer.entity';
 @Entity('accounts')
 export class Account {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id: string | undefined;
 
   @Column({ unique: true, type: 'varchar', length: 255 })
-  email: string;
+  email: string | undefined;
 
   @Column({ unique: true, type: 'varchar', length: 150 })
-  username: string;
+  username: string | undefined;
 
   @Column({ type: 'varchar', length: 255, select: false })
-  password: string;
+  password: string | undefined;
 
   @Column({
     type: 'enum',
     enum: Role,
     default: Role.CUSTOMER,
   })
-  role: Role;
+  role: Role | undefined;
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
-  isActive: boolean;
+  isActive: boolean | undefined;
 
   @OneToOne(() => Customer, (customer) => customer.account, { cascade: true })
-  customer: Customer;
+  customer: Customer | undefined;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })
-  createdAt: Date;
+  createdAt: Date | undefined;
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp with time zone' })
-  updatedAt: Date;
+  updatedAt: Date | undefined;
 }

@@ -9,7 +9,12 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AccountsService } from './accounts.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateAccountDto } from './dto/create-account.dto';
@@ -22,10 +27,17 @@ export class AccountsController {
   constructor(private readonly accountsService: AccountsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lấy danh sách tất cả tài khoản (Phân trang & Tìm kiếm)' })
+  @ApiOperation({
+    summary: 'Lấy danh sách tất cả tài khoản (Phân trang & Tìm kiếm)',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
-  @ApiQuery({ name: 'role', required: false, type: String, example: 'customer' })
+  @ApiQuery({
+    name: 'role',
+    required: false,
+    type: String,
+    example: 'customer',
+  })
   @ApiQuery({ name: 'search', required: false, type: String, example: 'john' })
   findAll(
     @Query('page') page?: number,
@@ -51,7 +63,9 @@ export class AccountsController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Cập nhật thông tin tài khoản (Role, Status, Email)' })
+  @ApiOperation({
+    summary: 'Cập nhật thông tin tài khoản (Role, Status, Email)',
+  })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateAccountDto,

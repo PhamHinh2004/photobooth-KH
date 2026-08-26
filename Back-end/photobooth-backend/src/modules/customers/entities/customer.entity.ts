@@ -13,36 +13,39 @@ import { Account } from '../../accounts/entities/account.entity';
 @Entity('customers')
 export class Customer {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id: string | undefined;
 
   @Column({ name: 'account_id', type: 'uuid', nullable: true, unique: true })
-  accountId: string;
+  accountId: string | undefined;
 
   @OneToOne(() => Account, (account) => account.customer, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'account_id' })
-  account: Account;
+  account: Account | undefined;
+
+  @Column({ name: 'is_created', type: 'boolean', default: false })
+  iscreated: boolean | undefined;
 
   @Column({ name: 'full_name', type: 'varchar', length: 255 })
-  fullName: string;
+  fullName: string | undefined;
 
   @Column({ type: 'date', nullable: true })
-  birthday: Date | string | null;
+  birthday: Date | string | null | undefined;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  city: string | null;
+  city: string | null | undefined;
 
   @Column({
     type: 'enum',
     enum: Gender,
     default: Gender.OTHERS,
   })
-  gender: Gender;
+  gender: Gender | undefined;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp with time zone' })
-  createdAt: Date;
+  createdAt: Date | undefined;
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp with time zone' })
-  updatedAt: Date;
+  updatedAt: Date | undefined;
 }

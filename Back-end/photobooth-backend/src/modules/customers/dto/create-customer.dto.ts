@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
@@ -13,12 +14,12 @@ export class CreateCustomerDto {
   @ApiProperty({ example: '3fa85f64-5717-4562-b3fc-2c963f66afa6', description: 'Account UUID' })
   @IsUUID('4', { message: 'accountId phải là định dạng UUID hợp lệ' })
   @IsNotEmpty({ message: 'accountId không được để trống' })
-  accountId: string;
+  accountId: string | undefined;
 
   @ApiProperty({ example: 'Nguyễn Văn A', description: 'Họ và tên' })
   @IsString({ message: 'fullName phải là chuỗi ký tự' })
   @IsNotEmpty({ message: 'fullName không được để trống' })
-  fullName: string;
+  fullName: string | undefined;
 
   @ApiPropertyOptional({ example: '1998-05-20', description: 'Ngày sinh (YYYY-MM-DD)' })
   @IsOptional()
