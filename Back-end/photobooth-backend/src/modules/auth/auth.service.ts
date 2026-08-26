@@ -38,7 +38,7 @@ export class AuthService {
       return null;
     }
 
-    const isMatch = await bcrypt.compare(pass, account.password);
+    const isMatch =  bcrypt.compare(pass, account.password as string);
     if (!isMatch) {
       return null;
     }
@@ -92,7 +92,7 @@ export class AuthService {
     });
     await this.customerRepository.save(newCustomer);
 
-    const accountWithRelation = await this.accountsService.findOne(savedAccount.id);
+    const accountWithRelation = await this.accountsService.findOne(savedAccount.id || '');
     const tokens = this.generateTokens(accountWithRelation);
 
     return {

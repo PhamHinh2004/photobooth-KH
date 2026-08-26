@@ -8,4 +8,5 @@ export default registerAs('database', () => ({
   name: process.env.DB_NAME ?? 'photobooth',
   synchronize: process.env.DB_SYNCHRONIZE === 'true',
   logging: process.env.DB_LOGGING === 'true',
+  ssl: process.env.DB_SSL === 'true',
 }));
