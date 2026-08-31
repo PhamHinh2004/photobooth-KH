@@ -1,17 +1,11 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
-import { AllExceptionsFilter } from './exception/all-exceptions.filter';
-import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
-import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { DatabaseModule } from './database/database.module';
-import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { AccountsModule } from './modules/accounts/accounts.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CustomersModule } from './modules/customers/customers.module';
@@ -25,14 +19,6 @@ import { CustomersModule } from './modules/customers/customers.module';
       envFilePath: '.env',
     }),
 
-    // Rate limiting
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000, // 60 giây
-        limit: 100, // tối đa 100 request/60s
-      },
-    ]),
-
     // Database
     DatabaseModule,
 
@@ -42,36 +28,6 @@ import { CustomersModule } from './modules/customers/customers.module';
     CustomersModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-
-    // Global Exception Filter
-    {
-      provide: APP_FILTER,
-      useClass: AllExceptionsFilter,
-    },
-
-    // Global JWT Guard
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
-
-    // Global Throttler Guard
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
-
-    // Global Response Interceptor
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: ResponseInterceptor,
-    },
-  ],
+  providers: [AppService],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggerMiddleware).forRoutes('*');
-  }
-}
+export class AppModule {}

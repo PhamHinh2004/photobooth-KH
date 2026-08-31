@@ -82,7 +82,7 @@ export class CustomersService {
    */
   async findByAccountId(accountId: string): Promise<Customer> {
     const customer = await this.customerRepository.findOne({
-      where: { accountId },
+      where: { account: { id: accountId } },
       relations: { account: true },
     });
 
@@ -112,7 +112,7 @@ export class CustomersService {
     }
 
     const existingCustomer = await this.customerRepository.findOne({
-      where: { accountId: dto.accountId },
+      where: { account: { id: dto.accountId } },
     });
 
     if (existingCustomer) {
@@ -122,7 +122,7 @@ export class CustomersService {
     }
 
     const customer = this.customerRepository.create({
-      accountId: dto.accountId,
+      account: { id: dto.accountId },
       fullName: dto.fullName,
       birthday: dto.birthday,
       city: dto.city,
