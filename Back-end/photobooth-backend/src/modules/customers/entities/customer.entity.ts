@@ -15,8 +15,8 @@ export class Customer {
   @PrimaryGeneratedColumn('uuid')
   id: string | undefined;
 
-  @Column({ name: 'account_id', type: 'uuid', nullable: true, unique: true })
-  accountId: string | undefined;
+  @Column({ name: 'image', type: 'varchar', length: 255, nullable: true })
+  image: string | null | undefined;
 
   @OneToOne(() => Account, (account) => account.customer, {
     onDelete: 'CASCADE',
@@ -27,8 +27,8 @@ export class Customer {
   @Column({ name: 'is_created', type: 'boolean', default: false })
   iscreated: boolean | undefined;
 
-  @Column({ name: 'full_name', type: 'varchar', length: 255 })
-  fullName: string | undefined;
+  @Column({ name: 'full_name', type: 'varchar', length: 255, nullable: true })
+  fullName: string | null | undefined;
 
   @Column({ type: 'date', nullable: true })
   birthday: Date | string | null | undefined;
