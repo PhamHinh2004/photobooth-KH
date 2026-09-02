@@ -3,6 +3,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
@@ -16,6 +17,7 @@ import { Role } from '../../common/enums/role.enum';
 @Injectable()
 export class AuthService {
   constructor(
+    private readonly jwtService: JwtService,
     private readonly accountsService: AccountsService,
     @InjectRepository(Account)
     private readonly accountRepository: Repository<Account>,
@@ -37,29 +39,29 @@ export class AuthService {
       throw new ConflictException('Email đã được sử dụng');
     }
 
-    // 2. Tạo username tự động nếu không truyền vào
-    const username =
-      dto.username ||
-      dto.email.split('@')[0] + Math.floor(1000 + Math.random() * 9000);
+    // 2. kiểm tra username đã tồn tại chưa
     const existingUsername = await this.accountRepository.findOne({
-      where: { username },
+      where: { username:dto.username },
     });
     if (existingUsername) {
       throw new ConflictException('Tên người dùng (username) đã tồn tại');
     }
 
-    // 3. Mã hóa mật khẩu
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    // 3. kiểm tra password có null không 
+    if (!dto.password) {
+      throw new ConflictException('Mật khẩu không được để trống');
+    }
+    // 4. Mã hóa mật khẩu
+    const hashedPassword = await bcrypt.hash(dto.password || '', 10);
 
-    // 4. Tạo và lưu Account
+    // 5. Tạo và lưu Account
     const newAccount = this.accountRepository.create({
       email: dto.email,
-      username,
+      username:dto.username,
       password: hashedPassword,
       role: Role.CUSTOMER,
       isActive: true,
       customer:{
-
       },
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -70,7 +72,7 @@ export class AuthService {
     return this.accountsService.findOne(savedAccount.id || '');
   }
 
-  async login(dto: LoginDto): Promise<Account> {
+  async login(dto: LoginDto): Promise<{ accessToken: string; account: Account }> {
     const account = await this.accountRepository
       .createQueryBuilder('account')
       .addSelect('account.password')
@@ -89,7 +91,25 @@ export class AuthService {
       throw new UnauthorizedException('Email/Username hoặc mật khẩu không chính xác');
     }
 
-    delete (account as Partial<Account>).password;
-    return account;
+    // Tạo JWT Token
+    const payload = {
+      sub: account.id || '',
+      email: account.email || '',
+      role: account.role || '',
+    };
+    const accessToken = this.jwtService.sign(payload as any);
+
+    return {
+      accessToken,
+      account,
+    };
+  }
+
+  async getAccounts(): Promise<Account[]> {
+    return this.accountRepository.find({
+      where: {
+        role: Role.CUSTOMER,
+      },
+    });
   }
 }
