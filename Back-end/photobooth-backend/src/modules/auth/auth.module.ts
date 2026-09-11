@@ -9,11 +9,12 @@ import { Customer } from '../customers/entities/customer.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { PasswordReset } from './entities/password-reset.entity';
 
 @Module({
   imports: [
     PassportModule,
-    TypeOrmModule.forFeature([Account, Customer]),
+    TypeOrmModule.forFeature([Account, Customer, PasswordReset]),
     AccountsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
