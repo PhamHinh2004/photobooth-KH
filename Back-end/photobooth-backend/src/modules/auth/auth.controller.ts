@@ -8,6 +8,9 @@ import { RegisterDto } from './dto/register.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { RolesGuard } from '../../common/guards/RolesGuard ';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -28,6 +31,29 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Sai email hoặc mật khẩu' })
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'Gửi mã OTP đặt lại mật khẩu qua email' })
+  @ApiResponse({ status: 200, description: 'Nếu email tồn tại, mã OTP đã được gửi' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post('verify-otp')
+  @ApiOperation({ summary: 'Xác thực OTP đặt lại mật khẩu' })
+  @ApiResponse({ status: 200, description: 'OTP hợp lệ và trả về reset token' })
+  @ApiResponse({ status: 400, description: 'OTP không hợp lệ hoặc đã hết hạn' })
+  async verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyOtp(dto);
+  }
+
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Đặt mật khẩu mới sau khi xác thực OTP' })
+  @ApiResponse({ status: 200, description: 'Đổi mật khẩu thành công' })
+  @ApiResponse({ status: 400, description: 'Reset token không hợp lệ hoặc đã hết hạn' })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 
   @Get('me')

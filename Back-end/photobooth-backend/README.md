@@ -31,6 +31,27 @@
 $ pnpm install
 ```
 
+### Gmail OTP configuration
+
+Create a Gmail App Password and add these variables to `.env`:
+
+```env
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=465
+MAIL_SECURE=true
+MAIL_USER=your-gmail@gmail.com
+MAIL_PASSWORD=your-16-character-app-password
+MAIL_FROM=your-gmail@gmail.com
+```
+
+The password reset flow uses these endpoints:
+
+- `POST /api/v1/auth/forgot-password` with `{ "email": "..." }`
+- `POST /api/v1/auth/verify-otp` with `{ "email": "...", "otp": "123456" }`
+- `POST /api/v1/auth/reset-password` with `{ "email": "...", "resetToken": "...", "newPassword": "..." }`
+
+When `DB_SYNCHRONIZE=false`, run the `password_resets` table statement in `src/database/schema.sql` manually.
+
 ## Compile and run the project
 
 ```bash
