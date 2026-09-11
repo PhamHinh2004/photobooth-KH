@@ -1,12 +1,10 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom'
-import ProtectedRoute from './ProtectedRoute'
 import AuthLayout from '../components/layouts/AuthLayout'
-import MainLayout from '../components/layouts/MainLayout'
 import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
 import ForgotPasswordPage from '../pages/auth/ForgetPasswordPage'
-import DashboardPage from '../pages/dashboard/DashboardPage'
 import HomePage from '../pages/home/HomePage'
+import ProfilePage from '../pages/profile/ProfilePage'
 
 const routes: RouteObject[] = [
   // Auth routes (không cần đăng nhập)
@@ -37,27 +35,15 @@ const routes: RouteObject[] = [
     path: '/',
     element: <HomePage />,
   },
-
-  // Protected routes (cần đăng nhập)
   {
-    element: <ProtectedRoute />,
-    children: [
-      {
-        element: <MainLayout />,
-        children: [
-          {
-            path: '/dashboard',
-            element: <DashboardPage />,
-          },
-        ],
-      },
-    ],
+    path: '/profile',
+    element: <ProfilePage />,
   },
 
   // Fallback
   {
     path: '*',
-    element: <Navigate to="/dashboard" replace />,
+    element: <Navigate to="/" replace />,
   },
 ]
 

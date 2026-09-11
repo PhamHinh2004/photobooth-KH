@@ -15,7 +15,7 @@ export class Customer {
   @PrimaryGeneratedColumn('uuid')
   id: string | undefined;
 
-  @Column({ name: 'image', type: 'varchar', length: 255, nullable: true })
+  @Column({ name: 'image', type: 'text', nullable: true })
   image: string | null | undefined;
 
   @OneToOne(() => Account, (account) => account.customer, {

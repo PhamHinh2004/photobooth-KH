@@ -1,238 +1,132 @@
-import React, { useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { message } from 'antd'
+import { authApi } from '@/api/auth.api'
 
-type OtpValues = [string, string, string, string]
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+type Step = 1 | 2 | 3
 
 const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate()
-
-  // Steps: 1 = Enter Email/Phone, 2 = Enter OTP, 3 = Reset Password
-  const [step, setStep] = useState<1 | 2 | 3>(1)
-  const [contact, setContact] = useState('')
-  const [otpValues, setOtpValues] = useState<OtpValues>(['', '', '', ''])
+  const [step, setStep] = useState<Step>(1)
+  const [email, setEmail] = useState('')
+  const [otp, setOtp] = useState('')
+  const [resetToken, setResetToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [secondsLeft, setSecondsLeft] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  const otpRefs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ]
+  useEffect(() => {
+    if (step !== 2 || secondsLeft <= 0) return
+    const timer = window.setInterval(() => setSecondsLeft((value) => Math.max(value - 1, 0)), 1000)
+    return () => window.clearInterval(timer)
+  }, [step, secondsLeft])
 
-  // Step 1: Send Reset Code
-  const handleSendCode = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!contact.trim()) {
-      message.warning('Vui lòng nhập Email hoặc Số điện thoại!')
+  const getApiError = (error: unknown, fallback: string) => {
+    const apiMessage = (error as { response?: { data?: { message?: string | string[] } } }).response?.data?.message
+    return Array.isArray(apiMessage) ? apiMessage.join(', ') : apiMessage || fallback
+  }
+
+  const handleSendCode = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!emailPattern.test(normalizedEmail)) {
+      setErrorMsg('Email không đúng định dạng.')
       return
     }
     setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
-      message.success(`Mã xác thực đã được gửi tới: ${contact}`)
+    setErrorMsg(null)
+    try {
+      const response = await authApi.forgotPassword({ email: normalizedEmail })
+      setEmail(normalizedEmail)
+      setOtp('')
+      setSecondsLeft(120)
       setStep(2)
-    }, 800)
-  }
-
-  // Step 2: Verify OTP
-  const handleOtpChange = (index: number, value: string) => {
-    if (value.length > 1) value = value.slice(-1)
-    const newOtp: OtpValues = [...otpValues]
-    newOtp[index] = value
-    setOtpValues(newOtp)
-
-    if (value && index < 3) {
-      otpRefs[index + 1].current?.focus()
+      message.success(response.message)
+    } catch (error: unknown) {
+      setErrorMsg(getApiError(error, 'Email chưa tồn tại trong hệ thống.'))
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otpValues[index] && index > 0) {
-      otpRefs[index - 1].current?.focus()
-    }
-  }
-
-  const handleVerifyOtp = (e: React.FormEvent) => {
-    e.preventDefault()
-    const code = otpValues.join('')
-    if (code.length < 4) {
-      message.warning('Vui lòng nhập đủ 4 chữ số OTP!')
+  const handleVerifyOtp = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!/^\d{6}$/.test(otp)) {
+      setErrorMsg('OTP phải gồm 6 chữ số.')
       return
     }
     setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
-      message.success('Xác thực OTP thành công!')
+    setErrorMsg(null)
+    try {
+      const response = await authApi.verifyForgotPasswordOtp({ email, otp })
+      setResetToken(response.resetToken)
       setStep(3)
-    }, 600)
+      message.success('Xác thực OTP thành công!')
+    } catch (error: unknown) {
+      setErrorMsg(getApiError(error, 'OTP không hợp lệ hoặc đã hết hạn.'))
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // Step 3: Change Password
-  const handleResetPassword = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newPassword || newPassword.length < 6) {
-      message.warning('Mật khẩu mới tối thiểu 6 ký tự!')
+  const handleResendCode = async () => {
+    setLoading(true)
+    setErrorMsg(null)
+    try {
+      const response = await authApi.resendForgotPasswordOtp({ email })
+      setOtp('')
+      setSecondsLeft(120)
+      message.success(response.message)
+    } catch (error: unknown) {
+      setErrorMsg(getApiError(error, 'Không thể gửi lại mã OTP.'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResetPassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (newPassword.length < 6) {
+      setErrorMsg('Mật khẩu mới phải có ít nhất 6 ký tự.')
       return
     }
     if (newPassword !== confirmPassword) {
-      message.error('Mật khẩu xác nhận không khớp!')
+      setErrorMsg('Mật khẩu xác nhận không khớp.')
       return
     }
     setLoading(true)
-    setTimeout(() => {
+    setErrorMsg(null)
+    try {
+      const response = await authApi.resetPassword({ email, resetToken, newPassword })
+      message.success(response.message)
+      navigate('/login', { replace: true })
+    } catch (error: unknown) {
+      setErrorMsg(getApiError(error, 'Không thể đổi mật khẩu.'))
+    } finally {
       setLoading(false)
-      message.success('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.')
-      navigate('/login')
-    }, 800)
+    }
   }
 
   return (
     <div className="bg-surface/60 backdrop-blur-2xl rounded-xl p-6 md:p-8 chrome-border relative overflow-hidden shadow-2xl">
-      {/* Window Title Bar */}
-      <div className="absolute top-0 left-0 right-0 h-7 bg-gradient-to-r from-surface-variant to-white/50 border-b border-white/80 flex items-center px-4 justify-between">
-        <span className="font-label-mono text-[10px] text-tertiary">ResetPassword.exe</span>
-        <div className="flex gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-outline-variant shadow-inner"></div>
-          <div className="w-3 h-3 rounded-full bg-outline-variant shadow-inner"></div>
-          <div className="w-3 h-3 rounded-full bg-error shadow-inner"></div>
-        </div>
-      </div>
-
+      <div className="absolute top-0 left-0 right-0 h-7 bg-gradient-to-r from-surface-variant to-white/50 border-b border-white/80 flex items-center px-4 justify-between"><span className="font-label-mono text-[10px] text-tertiary">ResetPassword.exe</span><div className="flex gap-1.5"><div className="w-3 h-3 rounded-full bg-outline-variant" /><div className="w-3 h-3 rounded-full bg-outline-variant" /><div className="w-3 h-3 rounded-full bg-error" /></div></div>
       <div className="mt-6 flex flex-col gap-5">
-        <div className="text-center mb-2">
-          <h2 className="font-headline-lg text-2xl text-secondary">Quên mật khẩu?</h2>
-          <p className="text-sm text-on-surface-variant">
-            {step === 1 && 'Nhập thông tin tài khoản để nhận mã khôi phục'}
-            {step === 2 && `Nhập mã OTP vừa gửi tới ${contact}`}
-            {step === 3 && 'Nhập mật khẩu mới cho tài khoản của bạn'}
-          </p>
-        </div>
+        <div className="text-center mb-2"><h2 className="font-headline-lg text-2xl text-secondary">Quên mật khẩu?</h2><p className="text-sm text-on-surface-variant">{step === 1 ? 'Nhập email đã đăng ký để nhận mã khôi phục' : step === 2 ? `Nhập OTP vừa gửi tới ${email}` : 'Nhập mật khẩu mới cho tài khoản của bạn'}</p></div>
+        {errorMsg && <div className="p-3 rounded-lg bg-error-container/30 border border-error text-error text-xs font-label-mono flex items-center gap-2"><span className="material-symbols-outlined text-sm">warning</span><span>{errorMsg}</span></div>}
 
-        {/* STEP 1: Enter Email / Phone */}
-        {step === 1 && (
-          <form onSubmit={handleSendCode} className="flex flex-col gap-5">
-            <div>
-              <label className="block font-label-mono text-label-mono text-on-surface-variant mb-1.5" htmlFor="contact">
-                Email hoặc Số điện thoại
-              </label>
-              <div className="relative">
-                <input
-                  id="contact"
-                  type="text"
-                  value={contact}
-                  onChange={(e) => setContact(e.target.value)}
-                  placeholder="Nhập email hoặc SĐT đăng ký"
-                  className="w-full rounded-lg border border-outline-variant p-3 font-body-md text-body-md text-on-surface input-inset focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all pr-10"
-                  required
-                />
-                <span className="material-symbols-outlined absolute right-3 top-3.5 text-outline text-lg">contact_mail</span>
-              </div>
-            </div>
+        {step === 1 && <form onSubmit={handleSendCode} className="flex flex-col gap-5"><label className="font-label-mono text-label-mono text-on-surface-variant" htmlFor="forgotEmail">Email đăng nhập</label><input id="forgotEmail" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="user@example.com" className="w-full rounded-lg border border-outline-variant p-3 text-on-surface input-inset focus:outline-none focus:ring-2 focus:ring-secondary" autoComplete="email" required /><button type="submit" disabled={loading} className="w-full glossy-btn rounded-full py-3.5 text-white font-bold disabled:opacity-50">{loading ? 'ĐANG KIỂM TRA...' : 'GỬI MÃ KHÔI PHỤC'} <span className="material-symbols-outlined align-middle">send</span></button></form>}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-2 w-full glossy-btn rounded-full py-3.5 px-6 font-headline-lg-mobile text-headline-lg-mobile text-white hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex justify-center items-center gap-2 border border-white/50 shadow-lg cursor-pointer disabled:opacity-50"
-            >
-              <span>{loading ? 'ĐANG GỬI MÃ...' : 'GỬI MÃ KHÔI PHỤC'}</span>
-              <span className="material-symbols-outlined">send</span>
-            </button>
-          </form>
-        )}
+        {step === 2 && <form onSubmit={handleVerifyOtp} className="flex flex-col gap-5"><input value={otp} onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="000000" className="w-full rounded-lg border border-outline-variant p-3 text-center text-2xl tracking-[0.4em] text-on-surface input-inset focus:outline-none focus:ring-2 focus:ring-secondary" autoFocus /><button type="submit" disabled={loading} className="w-full rounded-full bg-secondary py-3.5 text-white font-bold disabled:opacity-50">{loading ? 'ĐANG XÁC NHẬN...' : 'XÁC NHẬN OTP'} <span className="material-symbols-outlined align-middle">check_circle</span></button><div className="text-center text-sm text-on-surface-variant">{secondsLeft > 0 ? `Gửi lại mã sau ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}` : <button type="button" onClick={handleResendCode} disabled={loading} className="border-0 bg-transparent font-bold text-secondary">Gửi lại mã OTP</button>}</div></form>}
 
-        {/* STEP 2: Verify OTP */}
-        {step === 2 && (
-          <form onSubmit={handleVerifyOtp} className="flex flex-col gap-5">
-            <div className="flex justify-center gap-3 my-4">
-              {otpValues.map((val, idx) => (
-                <input
-                  key={idx}
-                  ref={otpRefs[idx]}
-                  type="text"
-                  maxLength={1}
-                  value={val}
-                  onChange={(e) => handleOtpChange(idx, e.target.value)}
-                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                  className="w-12 h-14 text-center rounded-lg border border-outline-variant font-headline-lg text-headline-lg text-on-surface input-inset focus:ring-2 focus:ring-secondary focus:border-secondary outline-none"
-                />
-              ))}
-            </div>
+        {step === 3 && <form onSubmit={handleResetPassword} className="flex flex-col gap-5"><div className="relative"><label className="mb-1.5 block font-label-mono text-label-mono text-on-surface-variant" htmlFor="newPassword">Mật khẩu mới</label><input id="newPassword" type={showPassword ? 'text' : 'password'} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className="w-full rounded-lg border border-outline-variant p-3 pr-10 text-on-surface input-inset focus:outline-none focus:ring-2 focus:ring-secondary" required /><button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-9 border-0 bg-transparent text-on-surface-variant"><span className="material-symbols-outlined">{showPassword ? 'visibility_off' : 'visibility'}</span></button></div><div className="relative"><label className="mb-1.5 block font-label-mono text-label-mono text-on-surface-variant" htmlFor="confirmPassword">Xác nhận mật khẩu mới</label><input id="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="w-full rounded-lg border border-outline-variant p-3 pr-10 text-on-surface input-inset focus:outline-none focus:ring-2 focus:ring-secondary" required /><button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-9 border-0 bg-transparent text-on-surface-variant"><span className="material-symbols-outlined">{showConfirmPassword ? 'visibility_off' : 'visibility'}</span></button></div><button type="submit" disabled={loading} className="w-full glossy-btn rounded-full py-3.5 text-white font-bold disabled:opacity-50">{loading ? 'ĐANG LƯU...' : 'ĐỔI MẬT KHẨU'} <span className="material-symbols-outlined align-middle">lock_reset</span></button></form>}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-secondary text-on-secondary rounded-full py-3.5 px-6 font-headline-lg-mobile text-headline-lg-mobile hover:bg-secondary-container transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50 flex justify-center items-center gap-2"
-            >
-              <span>{loading ? 'ĐANG XÁC NHẬN...' : 'XÁC NHẬN OTP'}</span>
-              <span className="material-symbols-outlined">check_circle</span>
-            </button>
-          </form>
-        )}
-
-        {/* STEP 3: Reset Password */}
-        {step === 3 && (
-          <form onSubmit={handleResetPassword} className="flex flex-col gap-5">
-            <div>
-              <label className="block font-label-mono text-label-mono text-on-surface-variant mb-1.5" htmlFor="newPassword">
-                Mật khẩu mới
-              </label>
-              <div className="relative">
-                <input
-                  id="newPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full rounded-lg border border-outline-variant p-3 font-body-md text-body-md text-on-surface input-inset focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all pr-10"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3.5 text-on-surface-variant hover:text-secondary transition-colors"
-                >
-                  <span className="material-symbols-outlined text-lg">{showPassword ? 'visibility_off' : 'visibility'}</span>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-label-mono text-label-mono text-on-surface-variant mb-1.5" htmlFor="confirmPassword">
-                Xác nhận mật khẩu mới
-              </label>
-              <input
-                id="confirmPassword"
-                type={showPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full rounded-lg border border-outline-variant p-3 font-body-md text-body-md text-on-surface input-inset focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-2 w-full glossy-btn rounded-full py-3.5 px-6 font-headline-lg-mobile text-headline-lg-mobile text-white hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex justify-center items-center gap-2 border border-white/50 shadow-lg cursor-pointer disabled:opacity-50"
-            >
-              <span>{loading ? 'ĐANG LƯU...' : 'ĐỔI MẬT KHẨU'}</span>
-              <span className="material-symbols-outlined">lock_reset</span>
-            </button>
-          </form>
-        )}
-
-        {/* Back to Login link */}
-        <div className="text-center mt-2">
-          <Link to="/login" className="text-sm text-secondary font-bold hover:underline flex items-center justify-center gap-1">
-            <span className="material-symbols-outlined text-base">arrow_back</span>
-            <span>Quay lại Đăng nhập</span>
-          </Link>
-        </div>
+        <div className="text-center mt-2"><Link to="/login" className="text-sm text-secondary font-bold hover:underline">← Quay lại Đăng nhập</Link></div>
       </div>
     </div>
   )

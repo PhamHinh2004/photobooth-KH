@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { message } from 'antd'
 import { authApi } from '@/api/auth.api'
@@ -19,6 +19,16 @@ const RegisterPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [showOtp, setShowOtp] = useState(false)
+  const [otp, setOtp] = useState('')
+  const [otpSecondsLeft, setOtpSecondsLeft] = useState(0)
+  const [otpLoading, setOtpLoading] = useState(false)
+
+  useEffect(() => {
+    if (!showOtp || otpSecondsLeft <= 0) return
+    const timer = window.setInterval(() => setOtpSecondsLeft((seconds) => Math.max(seconds - 1, 0)), 1000)
+    return () => window.clearInterval(timer)
+  }, [showOtp, otpSecondsLeft])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -53,9 +63,9 @@ const RegisterPage: React.FC = () => {
         phone: phone.trim(),
         password,
       })
-      setAuth(response.user, response.accessToken)
-      message.success('Đăng ký tài khoản thành công!')
-      navigate('/dashboard', { replace: true })
+      setShowOtp(true)
+      setOtpSecondsLeft(120)
+      message.success(response.message)
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { message?: string | string[] } } }
       const apiMessage = axiosError.response?.data?.message
@@ -70,7 +80,43 @@ const RegisterPage: React.FC = () => {
     }
   }
 
+  const handleVerifyOtp = async () => {
+    if (!/^\d{6}$/.test(otp)) {
+      setErrorMsg('Vui lòng nhập đủ 6 chữ số OTP.')
+      return
+    }
+    setOtpLoading(true)
+    try {
+      const response = await authApi.verifyRegistrationOtp({ email: email.trim().toLowerCase(), otp })
+      setAuth(response.user, response.accessToken)
+      message.success('Xác thực email và đăng ký thành công!')
+      navigate('/', { replace: true })
+    } catch (error: unknown) {
+      const apiMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message
+      setErrorMsg(apiMessage || 'OTP không hợp lệ hoặc đã hết hạn.')
+    } finally {
+      setOtpLoading(false)
+    }
+  }
+
+  const handleResendOtp = async () => {
+    setOtpLoading(true)
+    try {
+      const response = await authApi.resendRegistrationOtp({ fullName: fullName.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), password })
+      setOtp('')
+      setOtpSecondsLeft(120)
+      setErrorMsg(null)
+      message.success(response.message)
+    } catch (error: unknown) {
+      const apiMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message
+      setErrorMsg(apiMessage || 'Không thể gửi lại OTP.')
+    } finally {
+      setOtpLoading(false)
+    }
+  }
+
   return (
+    <>
     <div className="bg-surface/60 backdrop-blur-2xl rounded-xl p-6 md:p-8 chrome-border relative overflow-hidden shadow-2xl">
       <div className="absolute top-0 left-0 right-0 h-7 bg-gradient-to-r from-surface-variant to-white/50 border-b border-white/80 flex items-center px-4 justify-between">
         <span className="font-label-mono text-[10px] text-tertiary">Registration.exe</span>
@@ -114,6 +160,8 @@ const RegisterPage: React.FC = () => {
         <div className="text-center mt-2"><span className="text-sm text-on-surface-variant">Đã có tài khoản? </span><Link to="/login" className="text-sm text-secondary font-bold hover:underline">Đăng nhập</Link></div>
       </form>
     </div>
+    {showOtp && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"><div className="w-full max-w-sm rounded-xl bg-surface p-8 shadow-2xl"><h2 className="mb-2 text-center font-headline-lg text-2xl text-secondary">Xác thực email</h2><p className="mb-5 text-center text-sm text-on-surface-variant">Nhập mã OTP đã gửi tới <strong>{email}</strong>. Mã có hiệu lực trong 2 phút.</p><input value={otp} onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="000000" className="mb-4 w-full rounded-lg border border-outline-variant p-3 text-center text-2xl tracking-[0.4em] text-on-surface" />{errorMsg && <p className="mb-3 text-center text-sm text-error">{errorMsg}</p>}<button type="button" disabled={otpLoading} onClick={handleVerifyOtp} className="w-full rounded-full bg-secondary py-3 font-bold text-white disabled:opacity-50">{otpLoading ? 'ĐANG XÁC THỰC...' : 'XÁC NHẬN OTP'}</button><div className="mt-4 text-center text-sm text-on-surface-variant">{otpSecondsLeft > 0 ? <span>Gửi lại sau {Math.floor(otpSecondsLeft / 60)}:{String(otpSecondsLeft % 60).padStart(2, '0')}</span> : <button type="button" onClick={handleResendOtp} disabled={otpLoading} className="border-0 bg-transparent font-bold text-secondary">Gửi lại mã OTP</button>}</div><button type="button" onClick={() => setShowOtp(false)} className="mt-3 w-full border-0 bg-transparent text-sm text-on-surface-variant">Đóng</button></div></div>}
+    </>
   )
 }
 

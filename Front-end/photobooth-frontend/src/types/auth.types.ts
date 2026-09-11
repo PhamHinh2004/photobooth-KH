@@ -42,6 +42,31 @@ export interface User {
   updatedAt?: string
 }
 
+export interface CustomerProfile {
+  id: string
+  fullName: string | null
+  image: string | null
+  phone: string | null
+  birthday: string | null
+  city: string | null
+  gender: 'male' | 'female' | 'others' | null
+  createdAt: string
+  account: {
+    id: string
+    email: string
+    createdAt: string
+  }
+}
+
+export interface PhotoSession {
+  id: string
+  accountId: string
+  sessionType: 'solo' | 'group'
+  imageUrl: string
+  title: string | null
+  createdAt: string
+}
+
 export interface AuthResponse {
   accessToken: string
   refreshToken?: string

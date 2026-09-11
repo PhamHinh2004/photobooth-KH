@@ -33,7 +33,7 @@ const LoginPage: React.FC = () => {
       const response = await authApi.login({ email, password })
       setAuth(response.user, response.accessToken)
       message.success('Đăng nhập thành công!')
-      navigate('/dashboard', { replace: true })
+      navigate('/', { replace: true })
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string | string[] } } }
       const apiMessage = axiosError.response?.data?.message
@@ -57,7 +57,7 @@ const LoginPage: React.FC = () => {
       }
       setAuth(dummyUser, 'social_access_token_demo')
       message.success({ content: `Đăng nhập bằng ${provider} thành công!`, key: 'social' })
-      navigate('/dashboard')
+      navigate('/')
     }, 1200)
   }
 

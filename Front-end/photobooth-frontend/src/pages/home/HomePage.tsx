@@ -17,11 +17,11 @@ const HomePage: React.FC = () => {
       return
     }
     message.success(`Đang tham gia phòng: ${sessionCode.trim().toUpperCase()}`)
-    navigate(isAuthenticated ? '/dashboard' : '/login')
+    navigate(isAuthenticated ? '/' : '/login')
   }
 
   const handleStartShooting = () => {
-    navigate(isAuthenticated ? '/dashboard' : '/login')
+    navigate(isAuthenticated ? '/' : '/login')
   }
 
   const scrollToSection = (id: string) => {
@@ -57,7 +57,7 @@ const HomePage: React.FC = () => {
             <span className="text-outline">|</span>
             <button onClick={() => setLang('EN')} className={`bg-transparent border-0 cursor-pointer ${lang === 'EN' ? 'text-secondary font-bold' : 'text-on-surface-variant'}`}>EN</button>
           </div>
-          {isAuthenticated ? <button onClick={() => navigate('/dashboard')} className="bg-secondary/10 border border-secondary/30 text-secondary font-headline-lg-mobile px-4 py-2 rounded-full flex items-center gap-2"><span className="material-symbols-outlined text-xl">account_circle</span>{user?.name || 'Dashboard'}</button> : <button onClick={() => navigate('/login')} className="hidden lg:block text-primary font-body-md px-4 py-2 rounded-full bg-transparent border-0 cursor-pointer">Đăng nhập / Đăng ký</button>}
+          {isAuthenticated ? <button onClick={() => navigate('/profile')} className="bg-secondary/10 border border-secondary/30 text-secondary font-headline-lg-mobile px-4 py-2 rounded-full flex items-center gap-2"><span className="material-symbols-outlined text-xl">account_circle</span>{user?.name || 'Tài khoản'}</button> : <button onClick={() => navigate('/login')} className="hidden lg:block text-primary font-body-md px-4 py-2 rounded-full bg-transparent border-0 cursor-pointer">Đăng nhập / Đăng ký</button>}
           <button onClick={handleStartShooting} className="bg-primary text-on-primary font-headline-lg-mobile px-5 md:px-6 py-2 rounded-full cursor-pointer border border-white/50 shadow-md whitespace-nowrap">CHỤP NGAY</button>
         </div>
       </nav>

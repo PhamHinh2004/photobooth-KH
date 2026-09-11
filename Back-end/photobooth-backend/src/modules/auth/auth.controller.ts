@@ -11,6 +11,7 @@ import { RolesGuard } from '../../common/guards/RolesGuard ';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyRegistrationOtpDto } from './dto/verify-registration-otp.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -23,6 +24,18 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'Email/Username đã tồn tại' })
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @Post('verify-registration-otp')
+  @ApiOperation({ summary: 'Xác thực OTP đăng ký tài khoản' })
+  async verifyRegistrationOtp(@Body() dto: VerifyRegistrationOtpDto) {
+    return this.authService.verifyRegistrationOtp(dto);
+  }
+
+  @Post('resend-registration-otp')
+  @ApiOperation({ summary: 'Gửi lại OTP đăng ký tài khoản' })
+  async resendRegistrationOtp(@Body() dto: RegisterDto) {
+    return this.authService.resendRegistrationOtp(dto);
   }
 
   @Post('login')
@@ -38,6 +51,12 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Nếu email tồn tại, mã OTP đã được gửi' })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
+  }
+
+  @Post('resend-forgot-password-otp')
+  @ApiOperation({ summary: 'Gửi lại OTP quên mật khẩu' })
+  async resendForgotPasswordOtp(@Body() dto: ForgotPasswordDto) {
+    return this.authService.resendForgotPasswordOtp(dto);
   }
 
   @Post('verify-otp')
