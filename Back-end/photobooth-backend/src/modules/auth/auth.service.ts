@@ -30,7 +30,10 @@ export class AuthService {
    * @param dto
    * @returns
    */
-  async register(dto: RegisterDto): Promise<Account> {
+  async register(dto: RegisterDto): Promise<{
+    accessToken: string;
+    user: { id: string; email: string; name: string; role: Role | undefined };
+  }> {
     // 1. Kiểm tra email đã tồn tại chưa
     const existingEmail = await this.accountRepository.findOne({
       where: { email: dto.email },
@@ -39,9 +42,18 @@ export class AuthService {
       throw new ConflictException('Email đã được sử dụng');
     }
 
-    // 2. kiểm tra username đã tồn tại chưa
+    const normalizedPhone = dto.phone.replace(/^\+84/, '0');
+    const existingPhone = await this.customerRepository.findOne({
+      where: { phone: normalizedPhone },
+    });
+    if (existingPhone) {
+      throw new ConflictException('Số điện thoại đã được sử dụng');
+    }
+
+    // Username is kept for backward compatibility with the accounts schema.
+    const username = dto.email.split('@')[0].slice(0, 140);
     const existingUsername = await this.accountRepository.findOne({
-      where: { username:dto.username },
+      where: { username },
     });
     if (existingUsername) {
       throw new ConflictException('Tên người dùng (username) đã tồn tại');
@@ -57,22 +69,43 @@ export class AuthService {
     // 5. Tạo và lưu Account
     const newAccount = this.accountRepository.create({
       email: dto.email,
-      username:dto.username,
+      username,
       password: hashedPassword,
       role: Role.CUSTOMER,
       isActive: true,
-      customer:{
-      },
+      customer: { fullName: dto.fullName.trim(), phone: normalizedPhone },
       createdAt: new Date(),
       updatedAt: new Date(),
     });
     const savedAccount = await this.accountRepository.save(newAccount);
 
-    // 5. Trả về thông tin tài khoản đã tạo
-    return this.accountsService.findOne(savedAccount.id || '');
+    const payload = {
+      sub: savedAccount.id || '',
+      email: savedAccount.email || '',
+      role: savedAccount.role || '',
+    };
+    const accessToken = this.jwtService.sign(payload as any);
+
+    return {
+      accessToken,
+      user: {
+        id: savedAccount.id || '',
+        email: savedAccount.email || '',
+        name: dto.fullName.trim(),
+        role: savedAccount.role,
+      },
+    };
   }
 
-  async login(dto: LoginDto): Promise<{ accessToken: string; account: Account }> {
+  async login(dto: LoginDto): Promise<{
+    accessToken: string;
+    user: {
+      id: string;
+      email: string;
+      name: string;
+      role: Role | undefined;
+    };
+  }> {
     const account = await this.accountRepository
       .createQueryBuilder('account')
       .addSelect('account.password')
@@ -101,7 +134,12 @@ export class AuthService {
 
     return {
       accessToken,
-      account,
+      user: {
+        id: account.id || '',
+        email: account.email || '',
+        name: account.customer?.fullName || account.username || account.email || '',
+        role: account.role,
+      },
     };
   }
 

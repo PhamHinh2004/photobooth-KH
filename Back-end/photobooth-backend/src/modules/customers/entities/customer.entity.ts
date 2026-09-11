@@ -30,6 +30,9 @@ export class Customer {
   @Column({ name: 'full_name', type: 'varchar', length: 255, nullable: true })
   fullName: string | null | undefined;
 
+  @Column({ type: 'varchar', length: 20, unique: true, nullable: true })
+  phone: string | null | undefined;
+
   @Column({ type: 'date', nullable: true })
   birthday: Date | string | null | undefined;
 

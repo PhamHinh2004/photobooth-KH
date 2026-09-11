@@ -5,16 +5,16 @@ export const authApi = {
   /**
    * Đăng nhập
    */
-  login: async (data: LoginRequest): Promise<ApiResponse<AuthResponse>> => {
-    const response = await axiosInstance.post<ApiResponse<AuthResponse>>('/auth/login', data)
+  login: async (data: LoginRequest): Promise<AuthResponse> => {
+    const response = await axiosInstance.post<AuthResponse>('/auth/login', data)
     return response.data
   },
 
   /**
    * Đăng ký tài khoản
    */
-  register: async (data: RegisterRequest): Promise<ApiResponse<AuthResponse>> => {
-    const response = await axiosInstance.post<ApiResponse<AuthResponse>>('/auth/register', data)
+  register: async (data: RegisterRequest): Promise<AuthResponse> => {
+    const response = await axiosInstance.post<AuthResponse>('/auth/register', data)
     return response.data
   },
 

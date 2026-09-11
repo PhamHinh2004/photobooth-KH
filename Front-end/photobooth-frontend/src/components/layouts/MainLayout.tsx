@@ -4,6 +4,7 @@ import { Layout, Menu, Avatar, Dropdown, Button, theme } from 'antd'
 import type { MenuProps } from 'antd'
 import {
   DashboardOutlined,
+  HomeOutlined,
   UserOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -23,11 +24,17 @@ const MainLayout = () => {
 
   const menuItems: MenuProps['items'] = [
     {
+      key: '/',
+      icon: <HomeOutlined />,
+      label: 'Trang chủ',
+    },
+    {
       key: '/dashboard',
       icon: <DashboardOutlined />,
       label: 'Dashboard',
     },
   ]
+
 
   const userMenuItems: MenuProps['items'] = [
     {

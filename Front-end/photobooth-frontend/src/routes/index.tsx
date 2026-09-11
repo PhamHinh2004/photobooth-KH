@@ -4,7 +4,9 @@ import AuthLayout from '../components/layouts/AuthLayout'
 import MainLayout from '../components/layouts/MainLayout'
 import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
+import ForgotPasswordPage from '../pages/auth/ForgetPasswordPage'
 import DashboardPage from '../pages/dashboard/DashboardPage'
+import HomePage from '../pages/home/HomePage'
 
 const routes: RouteObject[] = [
   // Auth routes (không cần đăng nhập)
@@ -19,7 +21,21 @@ const routes: RouteObject[] = [
         path: '/register',
         element: <RegisterPage />,
       },
+      {
+        path: '/forgot-password',
+        element: <ForgotPasswordPage />,
+      },
+      {
+        path: '/forgetpassword',
+        element: <ForgotPasswordPage />,
+      },
     ],
+  },
+
+  // Public home page
+  {
+    path: '/',
+    element: <HomePage />,
   },
 
   // Protected routes (cần đăng nhập)
@@ -29,10 +45,6 @@ const routes: RouteObject[] = [
       {
         element: <MainLayout />,
         children: [
-          {
-            path: '/',
-            element: <Navigate to="/dashboard" replace />,
-          },
           {
             path: '/dashboard',
             element: <DashboardPage />,

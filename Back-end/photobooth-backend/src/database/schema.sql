@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS customers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id UUID UNIQUE REFERENCES accounts(id) ON DELETE CASCADE,
     full_name VARCHAR(255) NOT NULL,
+    phone VARCHAR(20) UNIQUE,
     birthday DATE,
     city VARCHAR(100),
     gender user_gender DEFAULT 'others',
@@ -40,10 +41,13 @@ CREATE TABLE IF NOT EXISTS customers (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
+
 -- 4. Create Indexes
 CREATE INDEX IF NOT EXISTS idx_accounts_email ON accounts(email);
 CREATE INDEX IF NOT EXISTS idx_accounts_username ON accounts(username);
 CREATE INDEX IF NOT EXISTS idx_customers_account_id ON customers(account_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone) WHERE phone IS NOT NULL;
 
 -- 5. Auto-update updated_at Trigger Function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
