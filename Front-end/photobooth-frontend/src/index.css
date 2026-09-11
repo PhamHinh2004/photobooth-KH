@@ -17,11 +17,120 @@
   --color-accent: #16213e;
 }
 
+/* Y2K Ambient Background */
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #faf9f7;
+  background-image: 
+      radial-gradient(circle at 15% 50%, rgba(137, 207, 240, 0.4) 0%, transparent 50%),
+      radial-gradient(circle at 85% 30%, rgba(254, 0, 254, 0.3) 0%, transparent 50%),
+      linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%);
+  background-size: 100% 100%, 100% 100%, 200% 100%;
+  animation: shimmerBg 10s ease-in-out infinite alternate;
+  overflow-x: hidden;
 }
+
+@keyframes shimmerBg {
+  0% { background-position: 0% 0%, 0% 0%, 0% 0%; }
+  100% { background-position: 0% 0%, 0% 0%, -100% 0%; }
+}
+
+/* 3D Curved Film Strip Container */
+.film-strip-container {
+  perspective: 1000px;
+}
+
+.film-strip-inner {
+  transform-style: preserve-3d;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  transform: rotateX(10deg);
+}
+
+.film-card {
+  transition: transform 0.3s ease;
+}
+
+.film-card:nth-child(1) { transform: translateZ(-20px) rotateY(15deg); }
+.film-card:nth-child(2) { transform: translateZ(20px) rotateY(5deg); z-index: 10; }
+.film-card:nth-child(3) { transform: translateZ(40px) rotateY(-5deg); z-index: 20; }
+.film-card:nth-child(4) { transform: translateZ(20px) rotateY(-15deg); z-index: 10; }
+.film-card:nth-child(5) { transform: translateZ(-20px) rotateY(-25deg); }
+
+.film-card:hover {
+  transform: translateZ(60px) scale(1.05) rotateY(0deg) !important;
+  z-index: 50;
+}
+
+/* Blue Y2K Glossy Button */
+.btn-glossy,
+.glossy-btn {
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 
+      0 10px 20px -5px rgba(2, 132, 199, 0.5),
+      inset 0 2px 3px rgba(255, 255, 255, 0.9),
+      inset 0 -2px 6px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative;
+  overflow: hidden;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.btn-glossy::after,
+.glossy-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.7s ease;
+}
+
+.btn-glossy:hover,
+.glossy-btn:hover {
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%) !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 
+      0 14px 28px -4px rgba(2, 132, 199, 0.7),
+      inset 0 2px 4px rgba(255, 255, 255, 1),
+      inset 0 -2px 6px rgba(0, 0, 0, 0.2) !important;
+  color: #ffffff !important;
+}
+
+.btn-glossy:hover::after,
+.glossy-btn:hover::after {
+  left: 160%;
+}
+
+.btn-glossy:active,
+.glossy-btn:active {
+  transform: translateY(1px) scale(0.98) !important;
+  box-shadow: 
+      0 4px 12px -2px rgba(2, 132, 199, 0.6),
+      inset 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+
+/* Silver Glossy Card */
+.silver-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(227,226,226,0.5) 100%);
+  box-shadow: 
+      0 8px 32px 0 rgba(31, 38, 135, 0.1),
+      inset 0 2px 4px rgba(255, 255, 255, 1),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+}
+
 
 /* ===========================
    Auth Layout

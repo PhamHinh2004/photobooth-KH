@@ -1,10 +1,10 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom'
-import ProtectedRoute from './ProtectedRoute'
 import AuthLayout from '../components/layouts/AuthLayout'
-import MainLayout from '../components/layouts/MainLayout'
 import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
-import DashboardPage from '../pages/dashboard/DashboardPage'
+import ForgotPasswordPage from '../pages/auth/ForgetPasswordPage'
+import HomePage from '../pages/home/HomePage'
+import ProfilePage from '../pages/profile/ProfilePage'
 
 const routes: RouteObject[] = [
   // Auth routes (không cần đăng nhập)
@@ -19,33 +19,31 @@ const routes: RouteObject[] = [
         path: '/register',
         element: <RegisterPage />,
       },
+      {
+        path: '/forgot-password',
+        element: <ForgotPasswordPage />,
+      },
+      {
+        path: '/forgetpassword',
+        element: <ForgotPasswordPage />,
+      },
     ],
   },
 
-  // Protected routes (cần đăng nhập)
+  // Public home page
   {
-    element: <ProtectedRoute />,
-    children: [
-      {
-        element: <MainLayout />,
-        children: [
-          {
-            path: '/',
-            element: <Navigate to="/dashboard" replace />,
-          },
-          {
-            path: '/dashboard',
-            element: <DashboardPage />,
-          },
-        ],
-      },
-    ],
+    path: '/',
+    element: <HomePage />,
+  },
+  {
+    path: '/profile',
+    element: <ProfilePage />,
   },
 
   // Fallback
   {
     path: '*',
-    element: <Navigate to="/dashboard" replace />,
+    element: <Navigate to="/" replace />,
   },
 ]
 

@@ -10,11 +10,12 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { PasswordReset } from './entities/password-reset.entity';
+import { RegistrationOtp } from './entities/registration-otp.entity';
 
 @Module({
   imports: [
     PassportModule,
-    TypeOrmModule.forFeature([Account, Customer, PasswordReset]),
+    TypeOrmModule.forFeature([Account, Customer, PasswordReset, RegistrationOtp]),
     AccountsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
