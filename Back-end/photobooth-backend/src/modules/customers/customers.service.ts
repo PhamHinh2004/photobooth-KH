@@ -10,6 +10,8 @@ import { Account } from '../accounts/entities/account.entity';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { Customer } from './entities/customer.entity';
+import { PhotoSession } from './entities/photo-session.entity';
+import { CreatePhotoSessionDto } from './dto/create-photo-session.dto';
 
 @Injectable()
 export class CustomersService {
@@ -18,6 +20,8 @@ export class CustomersService {
     private readonly customerRepository: Repository<Customer>,
     @InjectRepository(Account)
     private readonly accountRepository: Repository<Account>,
+    @InjectRepository(PhotoSession)
+    private readonly photoSessionRepository: Repository<PhotoSession>,
   ) {}
 
   /**
@@ -140,9 +144,31 @@ export class CustomersService {
     if (dto.birthday !== undefined) customer.birthday = dto.birthday;
     if (dto.city !== undefined) customer.city = dto.city;
     if (dto.gender !== undefined) customer.gender = dto.gender;
+    if (dto.image !== undefined) customer.image = dto.image;
 
     await this.customerRepository.save(customer);
     return this.findOne(id);
+  }
+
+  async updateByAccountId(accountId: string, dto: UpdateCustomerDto): Promise<Customer> {
+    const customer = await this.findByAccountId(accountId);
+    return this.update(customer.id || '', dto);
+  }
+
+  async getPhotoHistory(accountId: string, type?: 'solo' | 'group', order: 'newest' | 'oldest' = 'newest') {
+    const query = this.photoSessionRepository
+      .createQueryBuilder('photo')
+      .where('photo.account_id = :accountId', { accountId })
+      .orderBy('photo.created_at', order === 'oldest' ? 'ASC' : 'DESC');
+
+    if (type) query.andWhere('photo.session_type = :type', { type });
+    const photos = await query.getMany();
+    return { data: photos, total: photos.length };
+  }
+
+  async savePhotoSession(accountId: string, dto: CreatePhotoSessionDto) {
+    const photo = this.photoSessionRepository.create({ accountId, ...dto });
+    return this.photoSessionRepository.save(photo);
   }
 
   async remove(id: string): Promise<{ message: string }> {

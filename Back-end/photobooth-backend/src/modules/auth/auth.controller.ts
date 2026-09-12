@@ -1,8 +1,17 @@
-import { Body, Controller, Post } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { Role } from '../../common/enums/role.enum';
+import { RolesGuard } from '../../common/guards/RolesGuard ';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyRegistrationOtpDto } from './dto/verify-registration-otp.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -17,11 +26,73 @@ export class AuthController {
     return this.authService.register(dto);
   }
 
+  @Post('verify-registration-otp')
+  @ApiOperation({ summary: 'Xác thực OTP đăng ký tài khoản' })
+  async verifyRegistrationOtp(@Body() dto: VerifyRegistrationOtpDto) {
+    return this.authService.verifyRegistrationOtp(dto);
+  }
+
+  @Post('resend-registration-otp')
+  @ApiOperation({ summary: 'Gửi lại OTP đăng ký tài khoản' })
+  async resendRegistrationOtp(@Body() dto: RegisterDto) {
+    return this.authService.resendRegistrationOtp(dto);
+  }
+
   @Post('login')
-  @ApiOperation({ summary: 'Đăng nhập' })
+  @ApiOperation({ summary: 'Đăng nhập (Trả về JWT accessToken)' })
   @ApiResponse({ status: 200, description: 'Đăng nhập thành công' })
   @ApiResponse({ status: 401, description: 'Sai email hoặc mật khẩu' })
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'Gửi mã OTP đặt lại mật khẩu qua email' })
+  @ApiResponse({ status: 200, description: 'Nếu email tồn tại, mã OTP đã được gửi' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post('resend-forgot-password-otp')
+  @ApiOperation({ summary: 'Gửi lại OTP quên mật khẩu' })
+  async resendForgotPasswordOtp(@Body() dto: ForgotPasswordDto) {
+    return this.authService.resendForgotPasswordOtp(dto);
+  }
+
+  @Post('verify-otp')
+  @ApiOperation({ summary: 'Xác thực OTP đặt lại mật khẩu' })
+  @ApiResponse({ status: 200, description: 'OTP hợp lệ và trả về reset token' })
+  @ApiResponse({ status: 400, description: 'OTP không hợp lệ hoặc đã hết hạn' })
+  async verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyOtp(dto);
+  }
+
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Đặt mật khẩu mới sau khi xác thực OTP' })
+  @ApiResponse({ status: 200, description: 'Đổi mật khẩu thành công' })
+  @ApiResponse({ status: 400, description: 'Reset token không hợp lệ hoặc đã hết hạn' })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy thông tin tài khoản hiện tại (Yêu cầu JWT Token)' })
+  @ApiResponse({ status: 200, description: 'Thông tin tài khoản hiện tại' })
+  @ApiResponse({ status: 401, description: 'Chưa xác thực hoặc Token không hợp lệ' })
+  getMe(@CurrentUser() user: any) {
+    return user;
+  }
+
+  @Get('accounts')
+  @Roles(Role.ADMIN) // Chỉ cho phép ADMIN truy cập
+  @UseGuards(JwtAuthGuard, RolesGuard) // Xác thực trước, sau đó kiểm tra quyền
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy danh sách tài khoản (Yêu cầu JWT Token)' })
+  @ApiResponse({ status: 200, description: 'Danh sách tài khoản' })
+  @ApiResponse({ status: 401, description: 'Chưa xác thực hoặc Token không hợp lệ' })
+  getAccounts() {
+    return this.authService.getAccounts();
   }
 }

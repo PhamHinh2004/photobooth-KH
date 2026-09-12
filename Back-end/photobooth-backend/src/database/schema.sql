@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS customers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id UUID UNIQUE REFERENCES accounts(id) ON DELETE CASCADE,
     full_name VARCHAR(255) NOT NULL,
+    phone VARCHAR(20) UNIQUE,
+    image TEXT,
     birthday DATE,
     city VARCHAR(100),
     gender user_gender DEFAULT 'others',
@@ -40,12 +42,52 @@ CREATE TABLE IF NOT EXISTS customers (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Create Indexes
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS image TEXT;
+
+CREATE TABLE IF NOT EXISTS photo_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    session_type VARCHAR(10) NOT NULL CHECK (session_type IN ('solo', 'group')),
+    image_url VARCHAR(1000) NOT NULL,
+    title VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 4. Create Table: password reset sessions
+CREATE TABLE IF NOT EXISTS password_resets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    otp_hash VARCHAR(255) NOT NULL,
+    reset_token_hash VARCHAR(255),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    verified_at TIMESTAMP WITH TIME ZONE,
+    used_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS registration_otps (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    otp_hash VARCHAR(255) NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    last_sent_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 5. Create Indexes
 CREATE INDEX IF NOT EXISTS idx_accounts_email ON accounts(email);
 CREATE INDEX IF NOT EXISTS idx_accounts_username ON accounts(username);
 CREATE INDEX IF NOT EXISTS idx_customers_account_id ON customers(account_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone) WHERE phone IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_photo_sessions_account_created ON photo_sessions(account_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_password_resets_account_id ON password_resets(account_id);
+CREATE INDEX IF NOT EXISTS idx_registration_otps_email ON registration_otps(email);
 
--- 5. Auto-update updated_at Trigger Function
+-- 6. Auto-update updated_at Trigger Function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
