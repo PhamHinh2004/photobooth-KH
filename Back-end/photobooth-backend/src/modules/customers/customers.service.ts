@@ -12,6 +12,7 @@ import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { Customer } from './entities/customer.entity';
 import { PhotoSession } from './entities/photo-session.entity';
 import { CreatePhotoSessionDto } from './dto/create-photo-session.dto';
+import { GetCustomersQueryDto } from './dto/get-customers-query.dto';
 
 @Injectable()
 export class CustomersService {
@@ -42,6 +43,48 @@ export class CustomersService {
     if (search) {
       query.where(
         'customer.fullName ILIKE :search OR customer.city ILIKE :search OR account.email ILIKE :search',
+        { search: `%${search}%` },
+      );
+    }
+
+    const [data, total] = await query.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async findAllForAdmin(queryDto: GetCustomersQueryDto) {
+    const { page = 1, limit = 10, search, gender, hasAccount, sortBy = 'createdAt', sortOrder = 'DESC' } = queryDto;
+
+    const query = this.customerRepository
+      .createQueryBuilder('customer')
+      .leftJoinAndSelect('customer.account', 'account')
+      .orderBy(`customer.${sortBy}`, sortOrder.toUpperCase() as 'ASC' | 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (gender) {
+      query.andWhere('customer.gender = :gender', { gender });
+    }
+
+    if (hasAccount !== undefined) {
+      if (hasAccount) {
+        query.andWhere('customer.account_id IS NOT NULL');
+      } else {
+        query.andWhere('customer.account_id IS NULL');
+      }
+    }
+
+    if (search) {
+      query.andWhere(
+        '(customer.fullName ILIKE :search OR customer.city ILIKE :search OR account.email ILIKE :search)',
         { search: `%${search}%` },
       );
     }

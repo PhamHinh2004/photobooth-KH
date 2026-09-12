@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   OneToOne,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { Role } from '../../../common/enums/role.enum';
 import { Customer } from '../../customers/entities/customer.entity';
 
@@ -20,6 +21,7 @@ export class Account {
   @Column({ unique: true, type: 'varchar', length: 150 })
   username: string | undefined;
 
+  @Exclude()
   @Column({ type: 'varchar', length: 255, select: false })
   password: string | undefined;
 
