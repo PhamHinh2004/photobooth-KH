@@ -12,6 +12,7 @@ import { Customer } from '../customers/entities/customer.entity';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
+import { GetAccountsQueryDto } from './dto/get-accounts-query.dto';
 import { Account } from './entities/account.entity';
 
 @Injectable()
@@ -42,6 +43,44 @@ export class AccountsService {
 
     if (role) {
       query.andWhere('account.role = :role', { role });
+    }
+
+    if (search) {
+      query.andWhere(
+        '(account.email ILIKE :search OR account.username ILIKE :search OR customer.fullName ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    const [data, total] = await query.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async findAllForAdmin(queryDto: GetAccountsQueryDto) {
+    const { page = 1, limit = 10, search, role, isActive, sortBy = 'createdAt', sortOrder = 'DESC' } = queryDto;
+    
+    const query = this.accountRepository
+      .createQueryBuilder('account')
+      .leftJoinAndSelect('account.customer', 'customer')
+      .orderBy(`account.${sortBy}`, sortOrder.toUpperCase() as 'ASC' | 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (role) {
+      query.andWhere('account.role = :role', { role });
+    }
+
+    if (isActive !== undefined) {
+      query.andWhere('account.isActive = :isActive', { isActive });
     }
 
     if (search) {
