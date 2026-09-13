@@ -30,7 +30,7 @@ async function bootstrap() {
 
   // CORS
   app.enableCors({
-    origin: corsOrigin,
+    origin: true, // Cho phép tất cả các origin để fix lỗi CORS từ frontend
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,

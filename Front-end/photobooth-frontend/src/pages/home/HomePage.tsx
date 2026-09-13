@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { message } from 'antd'
+import { message, Dropdown, type MenuProps } from 'antd'
 import { useAuthStore } from '@/stores/auth.store'
+import { authApi } from '@/api/auth.api'
 import './HomePage.css'
 
 const HomePage: React.FC = () => {
@@ -23,6 +24,34 @@ const HomePage: React.FC = () => {
   const handleStartShooting = () => {
     navigate(isAuthenticated ? '/' : '/login')
   }
+
+  const handleLogout = async () => {
+    try {
+      await authApi.logout()
+    } catch (error) {
+      console.error('Lỗi khi đăng xuất:', error)
+    } finally {
+      useAuthStore.getState().logout()
+      message.success('Đã đăng xuất')
+      navigate('/login')
+    }
+  }
+
+  const accountMenuItems: MenuProps['items'] = [
+    {
+      key: 'profile',
+      label: 'Trang cá nhân',
+      icon: <span className="material-symbols-outlined align-middle mr-2 text-[18px]">person</span>,
+      onClick: () => navigate('/profile'),
+    },
+    {
+      key: 'logout',
+      label: 'Đăng xuất',
+      danger: true,
+      icon: <span className="material-symbols-outlined align-middle mr-2 text-[18px]">logout</span>,
+      onClick: handleLogout,
+    },
+  ]
 
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
@@ -57,7 +86,18 @@ const HomePage: React.FC = () => {
             <span className="text-outline">|</span>
             <button onClick={() => setLang('EN')} className={`bg-transparent border-0 cursor-pointer ${lang === 'EN' ? 'text-secondary font-bold' : 'text-on-surface-variant'}`}>EN</button>
           </div>
-          {isAuthenticated ? <button onClick={() => navigate('/profile')} className="bg-secondary/10 border border-secondary/30 text-secondary font-headline-lg-mobile px-4 py-2 rounded-full flex items-center gap-2"><span className="material-symbols-outlined text-xl">account_circle</span>{user?.name || 'Tài khoản'}</button> : <button onClick={() => navigate('/login')} className="hidden lg:block text-primary font-body-md px-4 py-2 rounded-full bg-transparent border-0 cursor-pointer">Đăng nhập / Đăng ký</button>}
+          {isAuthenticated ? (
+            <Dropdown menu={{ items: accountMenuItems }} trigger={['click']} placement="bottomRight">
+              <button className="bg-secondary/10 border border-secondary/30 text-secondary font-headline-lg-mobile px-4 py-2 rounded-full flex items-center gap-2 cursor-pointer hover:bg-secondary/20 transition-colors">
+                <span className="material-symbols-outlined text-xl">account_circle</span>
+                {user?.name || 'Tài khoản'}
+              </button>
+            </Dropdown>
+          ) : (
+            <button onClick={() => navigate('/login')} className="hidden lg:block text-primary font-body-md px-4 py-2 rounded-full bg-transparent border-0 cursor-pointer">
+              Đăng nhập / Đăng ký
+            </button>
+          )}
           <button onClick={handleStartShooting} className="bg-primary text-on-primary font-headline-lg-mobile px-5 md:px-6 py-2 rounded-full cursor-pointer border border-white/50 shadow-md whitespace-nowrap">CHỤP NGAY</button>
         </div>
       </nav>
