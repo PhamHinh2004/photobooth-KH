@@ -319,6 +319,12 @@ export class AuthService {
     };
   }
 
+  async logout() {
+    // Với JWT thông thường không lưu whitelist/blacklist, chỉ cần trả về thành công
+    // Client sẽ tự xóa token ở frontend.
+    return { message: 'Đăng xuất thành công' };
+  }
+
   async getAccounts(): Promise<Account[]> {
     return this.accountRepository.find({
       where: {

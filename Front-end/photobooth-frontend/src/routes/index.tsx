@@ -1,10 +1,12 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom'
 import AuthLayout from '../components/layouts/AuthLayout'
+import AdminLayout from '../components/layouts/AdminLayout'
 import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
 import ForgotPasswordPage from '../pages/auth/ForgetPasswordPage'
 import HomePage from '../pages/home/HomePage'
 import ProfilePage from '../pages/profile/ProfilePage'
+import AccountsPage from '../pages/admin/AccountsPage'
 
 const routes: RouteObject[] = [
   // Auth routes (không cần đăng nhập)
@@ -26,6 +28,22 @@ const routes: RouteObject[] = [
       {
         path: '/forgetpassword',
         element: <ForgotPasswordPage />,
+      },
+    ],
+  },
+
+  // Admin routes
+  {
+    path: '/admin',
+    element: <AdminLayout />,
+    children: [
+      {
+        index: true,
+        element: <Navigate to="/admin/accounts" replace />,
+      },
+      {
+        path: 'accounts',
+        element: <AccountsPage />,
       },
     ],
   },

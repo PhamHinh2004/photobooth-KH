@@ -46,6 +46,15 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Đăng xuất' })
+  @ApiResponse({ status: 200, description: 'Đăng xuất thành công' })
+  async logout() {
+    return this.authService.logout();
+  }
+
   @Post('forgot-password')
   @ApiOperation({ summary: 'Gửi mã OTP đặt lại mật khẩu qua email' })
   @ApiResponse({ status: 200, description: 'Nếu email tồn tại, mã OTP đã được gửi' })
