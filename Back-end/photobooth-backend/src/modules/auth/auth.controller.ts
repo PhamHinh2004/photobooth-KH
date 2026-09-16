@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
@@ -12,6 +12,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyRegistrationOtpDto } from './dto/verify-registration-otp.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -82,6 +83,26 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Reset token không hợp lệ hoặc đã hết hạn' })
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
+  }
+
+  @Patch('change-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Đổi mật khẩu tài khoản đang đăng nhập' })
+  @ApiBody({ type: ChangePasswordDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Đổi mật khẩu thành công',
+    schema: { example: { message: 'Đổi mật khẩu thành công' } },
+  })
+  @ApiResponse({ status: 400, description: 'Mật khẩu mới không đủ mạnh hoặc xác nhận không khớp' })
+  @ApiResponse({ status: 401, description: 'Chưa xác thực hoặc mật khẩu hiện tại không đúng' })
+  @ApiResponse({ status: 422, description: 'Mật khẩu mới không được giống mật khẩu cũ' })
+  async changePassword(
+    @CurrentUser() user: { id: string },
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(user.id, dto);
   }
 
   @Get('me')
