@@ -11,6 +11,7 @@ import { DatabaseModule } from './database/database.module';
 import { AccountsModule } from './modules/accounts/accounts.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CustomersModule } from './modules/customers/customers.module';
+import { FramesModule } from './modules/frames/frames.module';
 import { StorageModule } from './modules/storage/storage.module';
 
 @Module({
@@ -29,6 +30,7 @@ import { StorageModule } from './modules/storage/storage.module';
     AuthModule,
     AccountsModule,
     CustomersModule,
+    FramesModule,
     StorageModule,
   ],
   controllers: [AppController],
