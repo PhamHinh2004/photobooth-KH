@@ -279,6 +279,7 @@ export class AuthService {
       id: string;
       email: string;
       name: string;
+        avatarUrl: string | null;
       role: Role | undefined;
     };
   }> {
@@ -314,6 +315,7 @@ export class AuthService {
         id: account.id || '',
         email: account.email || '',
         name: account.customer?.fullName || account.username || account.email || '',
+        avatarUrl: account.customer?.image || null,
         role: account.role,
       },
     };
