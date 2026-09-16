@@ -18,6 +18,11 @@ export const authApi = {
     return response.data
   },
 
+  changePassword: async (data: { currentPassword: string; newPassword: string; confirmPassword: string }): Promise<{ message: string }> => {
+    const response = await axiosInstance.patch<{ message: string }>('/auth/change-password', data)
+    return response.data
+  },
+
   /**
    * Đăng ký tài khoản
    */

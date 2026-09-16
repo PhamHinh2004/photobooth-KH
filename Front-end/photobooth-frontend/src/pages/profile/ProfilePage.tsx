@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { message } from 'antd'
 import { authApi } from '@/api/auth.api'
+import { useAuthStore } from '@/stores/auth.store'
 import type { CustomerProfile, PhotoSession } from '@/types/auth.types'
 import './ProfilePage.css'
 
@@ -15,6 +16,7 @@ const formatDate = (value?: string | null) => value ? new Intl.DateTimeFormat('v
 
 const ProfilePage = () => {
   const navigate = useNavigate()
+  const setAuthUser = useAuthStore((state) => state.setUser)
   const [profile, setProfile] = useState<CustomerProfile | null>(null)
   const [provinces, setProvinces] = useState<Province[]>([])
   const [history, setHistory] = useState<PhotoSession[]>([])
@@ -89,6 +91,8 @@ const ProfilePage = () => {
     try {
       const updated = await authApi.updateMyProfile({ ...form, fullName: form.fullName.trim() })
       setProfile(updated)
+      const currentUser = useAuthStore.getState().user
+      if (currentUser) setAuthUser({ ...currentUser, name: updated.fullName || currentUser.name, avatarUrl: updated.image })
       setEditing(false)
       message.success('Đã cập nhật hồ sơ.')
     } catch {

@@ -5,7 +5,9 @@ import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
 import ForgotPasswordPage from '../pages/auth/ForgetPasswordPage'
 import HomePage from '../pages/home/HomePage'
+import AboutUsPage from '../pages/about/AboutUsPage'
 import ProfilePage from '../pages/profile/ProfilePage'
+import ChangePasswordPage from '../pages/profile/ChangePasswordPage'
 import AccountsPage from '../pages/admin/AccountsPage'
 
 const routes: RouteObject[] = [
@@ -54,8 +56,16 @@ const routes: RouteObject[] = [
     element: <HomePage />,
   },
   {
+    path: '/about-us',
+    element: <AboutUsPage />,
+  },
+  {
     path: '/profile',
     element: <ProfilePage />,
+  },
+  {
+    path: '/change-password',
+    element: <ChangePasswordPage />,
   },
 
   // Fallback
