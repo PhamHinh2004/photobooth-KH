@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   DashboardOutlined,
@@ -15,6 +15,12 @@ const AdminLayout = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuthStore()
+
+  useEffect(() => {
+    if (!user || user.role?.toLowerCase() !== 'admin') {
+      navigate('/', { replace: true })
+    }
+  }, [navigate, user])
 
   const handleLogout = () => {
     logout()
@@ -50,6 +56,8 @@ const AdminLayout = () => {
       onClick: handleLogout,
     },
   ]
+
+  if (!user || user.role?.toLowerCase() !== 'admin') return null
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-gray-900">
@@ -105,10 +113,10 @@ const AdminLayout = () => {
             <Dropdown menu={{ items: userDropdownItems }} placement="bottomRight" trigger={['click']}>
               <div className="flex items-center gap-3 cursor-pointer p-1.5 pr-3 rounded-full border border-gray-200 hover:bg-gray-50 transition-colors">
                 <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-semibold">
-                  {user?.username?.charAt(0).toUpperCase() || 'A'}
+                  {user.name.charAt(0).toUpperCase() || 'A'}
                 </div>
                 <div className="hidden md:block text-sm">
-                  <div className="font-medium text-gray-700">{user?.username || 'Admin User'}</div>
+                  <div className="font-medium text-gray-700">{user.name || 'Admin User'}</div>
                 </div>
               </div>
             </Dropdown>

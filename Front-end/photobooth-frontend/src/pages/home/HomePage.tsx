@@ -1,14 +1,13 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { message, Dropdown, type MenuProps } from 'antd'
+import { message } from 'antd'
 import { useAuthStore } from '@/stores/auth.store'
-import { authApi } from '@/api/auth.api'
+import PublicLayout from '@/components/layouts/PublicLayout'
 import './HomePage.css'
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate()
-  const { isAuthenticated, user } = useAuthStore()
-  const [lang, setLang] = useState<'VI' | 'EN'>('VI')
+  const { isAuthenticated } = useAuthStore()
   const [sessionCode, setSessionCode] = useState('')
 
   const handleJoinSession = (event?: React.FormEvent) => {
@@ -21,41 +20,7 @@ const HomePage: React.FC = () => {
     navigate(isAuthenticated ? '/' : '/login')
   }
 
-  const handleStartShooting = () => {
-    navigate(isAuthenticated ? '/' : '/login')
-  }
-
-  const handleLogout = async () => {
-    try {
-      await authApi.logout()
-    } catch (error) {
-      console.error('Lỗi khi đăng xuất:', error)
-    } finally {
-      useAuthStore.getState().logout()
-      message.success('Đã đăng xuất')
-      navigate('/login')
-    }
-  }
-
-  const accountMenuItems: MenuProps['items'] = [
-    {
-      key: 'profile',
-      label: 'Trang cá nhân',
-      icon: <span className="material-symbols-outlined align-middle mr-2 text-[18px]">person</span>,
-      onClick: () => navigate('/profile'),
-    },
-    {
-      key: 'logout',
-      label: 'Đăng xuất',
-      danger: true,
-      icon: <span className="material-symbols-outlined align-middle mr-2 text-[18px]">logout</span>,
-      onClick: handleLogout,
-    },
-  ]
-
-  const scrollToSection = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
-  }
+  const handleStartShooting = () => navigate(isAuthenticated ? '/' : '/login')
 
   const photos = [
     'https://lh3.googleusercontent.com/aida-public/AB6AXuDwv1jhAhnycjTXdsehFjfc43uj9HbsutmtAvbrmdNxQEqrWCb6X-lYlqiUMR6BPkUUJBxFo2w3JEcekYJNUwHXdGtiv21WZNiMUgqhA38AbAVL4kHOH3XRYwkbKhRGia3sGTYMLmlQMB5YAXNG9UBZxQp8tWnQBOhgOxRaAOmQHTWaETml1yPBxi4zA9ABG0MRTCtJy8mC7w26UAn6TTFDj4_JA79RRoVL_2T8pDPQSMEhX_XaaWAoMg',
@@ -66,41 +31,12 @@ const HomePage: React.FC = () => {
   ]
 
   return (
-    <div className="min-h-screen flex flex-col font-body-md text-body-md text-on-background relative overflow-x-hidden">
+    <PublicLayout>
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <span className="material-symbols-outlined absolute top-[20%] left-[10%] text-secondary/50" style={{ fontSize: '48px', fontVariationSettings: "'FILL' 1" }}>flare</span>
         <span className="material-symbols-outlined absolute top-[60%] right-[15%] text-primary-fixed-dim/60" style={{ fontSize: '64px', fontVariationSettings: "'FILL' 1" }}>flare</span>
         <span className="material-symbols-outlined absolute bottom-[20%] left-[25%] text-secondary-fixed-dim/40" style={{ fontSize: '32px', fontVariationSettings: "'FILL' 1" }}>flare</span>
       </div>
-
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-8 py-3 bg-surface/80 backdrop-blur-xl rounded-full mt-4 mx-auto max-w-[95%] border border-outline-variant bg-gradient-to-b from-white/40 to-transparent shadow-[0_8px_32px_rgba(0,0,0,0.1)]">
-        <button onClick={() => navigate('/')} className="font-display-bubble text-3xl md:text-display-bubble text-secondary drop-shadow-[0_2px_2px_rgba(255,255,255,0.8)] cursor-pointer select-none bg-transparent border-0">KH Booth</button>
-        <ul className="hidden md:flex gap-8 items-center font-headline-lg text-lg lg:text-headline-lg list-none">
-          <li onClick={() => scrollToSection('hero-section')} className="text-secondary font-bold border-b-2 border-secondary pb-1 cursor-pointer">Trang chủ</li>
-          <li onClick={() => scrollToSection('features-section')} className="text-on-surface-variant font-medium cursor-pointer">Tính năng</li>
-          <li onClick={() => scrollToSection('how-it-works-section')} className="text-on-surface-variant font-medium cursor-pointer">Hướng dẫn</li>
-        </ul>
-        <div className="flex items-center gap-3 md:gap-4">
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-surface-container/60 rounded-full border border-white/30 shadow-inner font-label-mono text-label-mono">
-            <button onClick={() => setLang('VI')} className={`bg-transparent border-0 cursor-pointer ${lang === 'VI' ? 'text-secondary font-bold' : 'text-on-surface-variant'}`}>VI</button>
-            <span className="text-outline">|</span>
-            <button onClick={() => setLang('EN')} className={`bg-transparent border-0 cursor-pointer ${lang === 'EN' ? 'text-secondary font-bold' : 'text-on-surface-variant'}`}>EN</button>
-          </div>
-          {isAuthenticated ? (
-            <Dropdown menu={{ items: accountMenuItems }} trigger={['click']} placement="bottomRight">
-              <button className="bg-secondary/10 border border-secondary/30 text-secondary font-headline-lg-mobile px-4 py-2 rounded-full flex items-center gap-2 cursor-pointer hover:bg-secondary/20 transition-colors">
-                <span className="material-symbols-outlined text-xl">account_circle</span>
-                {user?.name || 'Tài khoản'}
-              </button>
-            </Dropdown>
-          ) : (
-            <button onClick={() => navigate('/login')} className="hidden lg:block text-primary font-body-md px-4 py-2 rounded-full bg-transparent border-0 cursor-pointer">
-              Đăng nhập / Đăng ký
-            </button>
-          )}
-          <button onClick={handleStartShooting} className="bg-primary text-on-primary font-headline-lg-mobile px-5 md:px-6 py-2 rounded-full cursor-pointer border border-white/50 shadow-md whitespace-nowrap">CHỤP NGAY</button>
-        </div>
-      </nav>
 
       <main className="flex-grow flex flex-col items-center justify-start pt-32 pb-16 w-full max-w-container-max mx-auto z-10 relative">
         <section id="hero-section" className="text-center mb-12 flex flex-col items-center px-4 md:px-margin-desktop">
@@ -129,8 +65,7 @@ const HomePage: React.FC = () => {
           {['Chọn Chế Độ', 'Chỉnh Style', 'Nhận Ảnh Xịn'].map((title, index) => <div key={title} className="flex-1 flex flex-col items-center text-center z-10"><div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white font-display-bubble text-3xl shadow-lg border-4 border-surface mb-6">{index + 1}</div><h3 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-2">{title}</h3><p className="text-on-surface-variant">{['Tạo phòng chụp đơn hoặc mời bạn bè tham gia cùng lúc.', 'Áp dụng các filter Y2K cực chất và tùy chỉnh sticker.', 'Lưu ảnh về máy nhanh chóng và khoe với mọi người.'][index]}</p></div>)}
         </div></section>
       </main>
-      <footer className="w-full bg-surface-container-low py-8 px-8 border-t border-white/50 relative z-10 mt-auto"><div className="max-w-container-max mx-auto flex flex-col md:flex-row justify-between items-center gap-4"><div className="font-display-bubble text-2xl text-secondary">KH Booth</div><div className="flex gap-6 text-on-surface-variant font-medium"><button className="bg-transparent border-0 cursor-pointer" onClick={() => scrollToSection('hero-section')}>Về Chúng Tôi</button><button className="bg-transparent border-0 cursor-pointer" onClick={() => scrollToSection('features-section')}>Điều Khoản</button><button className="bg-transparent border-0 cursor-pointer" onClick={() => scrollToSection('how-it-works-section')}>Bảo Mật</button></div><div className="text-outline text-sm">© 2026 Photobooth AI Y2K.</div></div></footer>
-    </div>
+    </PublicLayout>
   )
 }
 

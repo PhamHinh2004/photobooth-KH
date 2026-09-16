@@ -33,7 +33,7 @@ const LoginPage: React.FC = () => {
       const response = await authApi.login({ email, password })
       setAuth(response.user, response.accessToken)
       message.success('Đăng nhập thành công!')
-      navigate('/', { replace: true })
+      navigate(response.user.role?.toLowerCase() === 'admin' ? '/admin' : '/', { replace: true })
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string | string[] } } }
       const apiMessage = axiosError.response?.data?.message
