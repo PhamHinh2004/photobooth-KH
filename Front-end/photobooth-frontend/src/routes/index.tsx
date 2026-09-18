@@ -9,6 +9,7 @@ import AboutUsPage from '../pages/about/AboutUsPage'
 import ProfilePage from '../pages/profile/ProfilePage'
 import ChangePasswordPage from '../pages/profile/ChangePasswordPage'
 import AccountsPage from '../pages/admin/AccountsPage'
+import CapturePage from '../pages/capture/CapturePage'
 
 const routes: RouteObject[] = [
   // Auth routes (không cần đăng nhập)
@@ -66,6 +67,12 @@ const routes: RouteObject[] = [
   {
     path: '/change-password',
     element: <ChangePasswordPage />,
+  },
+
+  // Photobooth capture
+  {
+    path: '/capture',
+    element: <CapturePage />,
   },
 
   // Fallback

@@ -18,6 +18,13 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      // Proxy cho R2 public URL — bypass CORS khi canvas drawImage frame
+      '/r2-proxy': {
+        target: 'https://pub-4eb303709ef24609a3b420990203812a.r2.dev',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/r2-proxy/, ''),
+      },
     },
   },
 })
