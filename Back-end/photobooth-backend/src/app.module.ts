@@ -12,6 +12,7 @@ import { AccountsModule } from './modules/accounts/accounts.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { FramesModule } from './modules/frames/frames.module';
+import { PhotosModule } from './modules/photos/photos.module';
 import { StorageModule } from './modules/storage/storage.module';
 
 @Module({
@@ -31,6 +32,7 @@ import { StorageModule } from './modules/storage/storage.module';
     AccountsModule,
     CustomersModule,
     FramesModule,
+    PhotosModule,
     StorageModule,
   ],
   controllers: [AppController],
