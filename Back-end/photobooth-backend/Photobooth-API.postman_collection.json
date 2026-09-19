@@ -1,0 +1,656 @@
+{
+  "info": {
+    "_postman_id": "photobooth-kh-api-collection",
+    "name": "🎞️ Photobooth KH API",
+    "description": "API Collection cho Photobooth KH Backend\n\nBase URL: http://localhost:3000/api/v1\n\n## Hướng dẫn sử dụng:\n1. Tạo environment với biến `base_url` = `http://localhost:3000/api/v1`\n2. Login bằng endpoint Auth > Login\n3. Token sẽ tự động được lưu vào biến collection\n4. Các endpoint yêu cầu Bearer token sẽ tự động lấy từ biến `token`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string",
+      "description": "JWT Access Token - Tự động set sau khi Login"
+    },
+    {
+      "key": "reset_token",
+      "value": "",
+      "type": "string",
+      "description": "Reset Token từ verify-otp"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "🔐 Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"username\": \"testuser\",\n  \"password\": \"Password@123\",\n  \"full_name\": \"Test User\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Verify Registration OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"otp\": \"123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/verify-registration-otp",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "verify-registration-otp"]
+            }
+          }
+        },
+        {
+          "name": "Resend Registration OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/resend-registration-otp",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "resend-registration-otp"]
+            }
+          }
+        },
+        {
+          "name": "Login ⭐ (Auto-save token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.accessToken) {",
+                  "  pm.collectionVariables.set('token', res.accessToken);",
+                  "  console.log('✅ Token saved: ' + res.accessToken.substring(0,20) + '...');",
+                  "} else if (res.access_token) {",
+                  "  pm.collectionVariables.set('token', res.access_token);",
+                  "  console.log('✅ Token saved!');",
+                  "} else {",
+                  "  console.log('⚠️ Token not found in response. Keys: ' + Object.keys(res).join(', '));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@photobooth.com\",\n  \"password\": \"Admin@123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Đăng nhập. Token sẽ tự động được lưu vào biến collection `token`."
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Get All Accounts (Admin only)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/auth/accounts",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "accounts"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Password@123\",\n  \"newPassword\": \"NewPassword@456\",\n  \"confirmPassword\": \"NewPassword@456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/change-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "change-password"]
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "forgot-password"]
+            }
+          }
+        },
+        {
+          "name": "Resend Forgot Password OTP",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/resend-forgot-password-otp",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "resend-forgot-password-otp"]
+            }
+          }
+        },
+        {
+          "name": "Verify OTP (get reset token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var res = pm.response.json();",
+                  "if (res.resetToken) {",
+                  "  pm.collectionVariables.set('reset_token', res.resetToken);",
+                  "  console.log('✅ Reset token saved!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"otp\": \"123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/verify-otp",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "verify-otp"]
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resetToken\": \"{{reset_token}}\",\n  \"newPassword\": \"NewPassword@123\",\n  \"confirmPassword\": \"NewPassword@123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/reset-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "reset-password"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 Accounts",
+      "item": [
+        {
+          "name": "Get All Accounts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/accounts?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["accounts"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "role", "value": "", "disabled": true },
+                { "key": "search", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Account by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/accounts/:id",
+              "host": ["{{base_url}}"],
+              "path": ["accounts", ":id"],
+              "variable": [{ "key": "id", "value": "REPLACE_WITH_UUID" }]
+            }
+          }
+        },
+        {
+          "name": "Create Account",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newaccount@example.com\",\n  \"username\": \"newuser\",\n  \"password\": \"Password@123\",\n  \"full_name\": \"New User\",\n  \"role\": \"customer\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts",
+              "host": ["{{base_url}}"],
+              "path": ["accounts"]
+            }
+          }
+        },
+        {
+          "name": "Update Account",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Updated Name\",\n  \"role\": \"customer\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/:id",
+              "host": ["{{base_url}}"],
+              "path": ["accounts", ":id"],
+              "variable": [{ "key": "id", "value": "REPLACE_WITH_UUID" }]
+            }
+          }
+        },
+        {
+          "name": "Change Account Password",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newPassword\": \"NewPassword@123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/:id/change-password",
+              "host": ["{{base_url}}"],
+              "path": ["accounts", ":id", "change-password"],
+              "variable": [{ "key": "id", "value": "REPLACE_WITH_UUID" }]
+            }
+          }
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/accounts/:id",
+              "host": ["{{base_url}}"],
+              "path": ["accounts", ":id"],
+              "variable": [{ "key": "id", "value": "REPLACE_WITH_UUID" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎞️ Frames",
+      "item": [
+        {
+          "name": "Get All Frames (Public)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/frames",
+              "host": ["{{base_url}}"],
+              "path": ["frames"]
+            },
+            "description": "Không cần token. Dùng khi khách chọn frame chụp ảnh."
+          }
+        },
+        {
+          "name": "Create Frame (Admin - multipart/form-data)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Sweet Moments",
+                  "type": "text",
+                  "description": "Tên frame (bắt buộc)"
+                },
+                {
+                  "key": "aspect_ratio",
+                  "value": "1:4",
+                  "type": "text",
+                  "description": "Tỉ lệ khung hình (tùy chọn)"
+                },
+                {
+                  "key": "session_type_supported",
+                  "value": "both",
+                  "type": "text",
+                  "description": "single | group | both (tùy chọn)"
+                },
+                {
+                  "key": "sort_order",
+                  "value": "0",
+                  "type": "text",
+                  "description": "Thứ tự sắp xếp (tùy chọn)"
+                },
+                {
+                  "key": "layout_config",
+                  "value": "{\"canvas_width\":1024,\"canvas_height\":4128,\"slots\":[{\"x\":120,\"y\":506,\"width\":750,\"height\":784},{\"x\":120,\"y\":1506,\"width\":750,\"height\":784},{\"x\":120,\"y\":2506,\"width\":750,\"height\":784},{\"x\":120,\"y\":3506,\"width\":750,\"height\":784}]}",
+                  "type": "text",
+                  "description": "JSON string (bắt buộc)"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "File ảnh frame PNG/JPG (bắt buộc)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/frames",
+              "host": ["{{base_url}}"],
+              "path": ["frames"]
+            },
+            "description": "⚠️ Yêu cầu role ADMIN + Bearer token\n\nlayout_config mẫu (4 slots):\n{\"canvas_width\":1024,\"canvas_height\":4128,\"slots\":[{\"x\":120,\"y\":506,\"width\":750,\"height\":784}]}"
+          }
+        },
+        {
+          "name": "Delete Frame (Admin)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/frames/:id",
+              "host": ["{{base_url}}"],
+              "path": ["frames", ":id"],
+              "variable": [{ "key": "id", "value": "REPLACE_WITH_FRAME_UUID" }]
+            },
+            "description": "Xóa frame + xóa file ảnh trên Cloudflare R2. Yêu cầu role ADMIN."
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 Customers",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/customers/me/profile",
+              "host": ["{{base_url}}"],
+              "path": ["customers", "me", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Nguyễn Văn A\",\n  \"phone\": \"0901234567\",\n  \"date_of_birth\": \"1995-06-15\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/customers/me/profile",
+              "host": ["{{base_url}}"],
+              "path": ["customers", "me", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Get My Photo History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/customers/me/photo-history?order=newest",
+              "host": ["{{base_url}}"],
+              "path": ["customers", "me", "photo-history"],
+              "query": [
+                { "key": "type", "value": "solo", "disabled": true, "description": "solo | group" },
+                { "key": "order", "value": "newest", "description": "newest | oldest" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Save Photo Session",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"frame_id\": \"REPLACE_WITH_FRAME_UUID\",\n  \"photo_urls\": [\n    \"https://r2.example.com/photos/photo1.jpg\",\n    \"https://r2.example.com/photos/photo2.jpg\"\n  ],\n  \"session_type\": \"solo\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/customers/me/photo-history",
+              "host": ["{{base_url}}"],
+              "path": ["customers", "me", "photo-history"]
+            }
+          }
+        },
+        {
+          "name": "Get All Customers",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/customers?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["customers"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "search", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Customer by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/customers/:id",
+              "host": ["{{base_url}}"],
+              "path": ["customers", ":id"],
+              "variable": [{ "key": "id", "value": "REPLACE_WITH_UUID" }]
+            }
+          }
+        },
+        {
+          "name": "Get Customer by Account ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/customers/account/:accountId",
+              "host": ["{{base_url}}"],
+              "path": ["customers", "account", ":accountId"],
+              "variable": [{ "key": "accountId", "value": "REPLACE_WITH_UUID" }]
+            }
+          }
+        },
+        {
+          "name": "Create Customer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": \"REPLACE_WITH_ACCOUNT_UUID\",\n  \"full_name\": \"Nguyễn Thị B\",\n  \"phone\": \"0901234567\",\n  \"date_of_birth\": \"1998-03-22\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/customers",
+              "host": ["{{base_url}}"],
+              "path": ["customers"]
+            }
+          }
+        },
+        {
+          "name": "Update Customer",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Updated Name\",\n  \"phone\": \"0909999999\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/customers/:id",
+              "host": ["{{base_url}}"],
+              "path": ["customers", ":id"],
+              "variable": [{ "key": "id", "value": "REPLACE_WITH_UUID" }]
+            }
+          }
+        },
+        {
+          "name": "Delete Customer",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/customers/:id",
+              "host": ["{{base_url}}"],
+              "path": ["customers", ":id"],
+              "variable": [{ "key": "id", "value": "REPLACE_WITH_UUID" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "☁️ Storage Test",
+      "item": [
+        {
+          "name": "Upload File to R2",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "folder",
+                  "value": "test-folder",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/storage-test/upload",
+              "host": ["{{base_url}}"],
+              "path": ["storage-test", "upload"]
+            }
+          }
+        },
+        {
+          "name": "Delete File from R2",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileUrl\": \"https://pub-xxxx.r2.dev/test-folder/example.png\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/storage-test/delete",
+              "host": ["{{base_url}}"],
+              "path": ["storage-test", "delete"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

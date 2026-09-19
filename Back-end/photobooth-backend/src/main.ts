@@ -1,6 +1,6 @@
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { ClassSerializerInterceptor, ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
 import express from 'express';
@@ -30,7 +30,7 @@ async function bootstrap() {
 
   // CORS
   app.enableCors({
-    origin: corsOrigin,
+    origin: true, // Cho phép tất cả các origin để fix lỗi CORS từ frontend
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -53,6 +53,9 @@ async function bootstrap() {
       },
     }),
   );
+
+  // Global Interceptor
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
   // Swagger
   const swaggerConfig = new DocumentBuilder()

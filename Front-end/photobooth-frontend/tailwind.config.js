@@ -19,6 +19,12 @@ export default {
         'error-container': 'var(--error-container, #fee2e2)',
         tertiary: 'var(--tertiary, #6b7280)',
       },
+      fontFamily: {
+        body: ['Space Grotesk', 'sans-serif'],
+        headline: ['Bricolage Grotesque', 'sans-serif'],
+        display: ['Bricolage Grotesque', 'sans-serif'],
+        label: ['JetBrains Mono', 'monospace'],
+      },
     },
   },
   plugins: [],

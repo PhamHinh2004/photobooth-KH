@@ -11,6 +11,19 @@ export const authApi = {
   },
 
   /**
+   * Đăng xuất
+   */
+  logout: async (): Promise<{ message: string }> => {
+    const response = await axiosInstance.post<{ message: string }>('/auth/logout')
+    return response.data
+  },
+
+  changePassword: async (data: { currentPassword: string; newPassword: string; confirmPassword: string }): Promise<{ message: string }> => {
+    const response = await axiosInstance.patch<{ message: string }>('/auth/change-password', data)
+    return response.data
+  },
+
+  /**
    * Đăng ký tài khoản
    */
   register: async (data: RegisterRequest): Promise<{ message: string }> => {

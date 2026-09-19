@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   UnauthorizedException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -23,6 +24,7 @@ import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyRegistrationOtpDto } from './dto/verify-registration-otp.dto';
 import { RegistrationOtp } from './entities/registration-otp.entity';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -279,6 +281,7 @@ export class AuthService {
       id: string;
       email: string;
       name: string;
+        avatarUrl: string | null;
       role: Role | undefined;
     };
   }> {
@@ -314,9 +317,16 @@ export class AuthService {
         id: account.id || '',
         email: account.email || '',
         name: account.customer?.fullName || account.username || account.email || '',
+        avatarUrl: account.customer?.image || null,
         role: account.role,
       },
     };
+  }
+
+  async logout() {
+    // Với JWT thông thường không lưu whitelist/blacklist, chỉ cần trả về thành công
+    // Client sẽ tự xóa token ở frontend.
+    return { message: 'Đăng xuất thành công' };
   }
 
   async getAccounts(): Promise<Account[]> {
@@ -325,5 +335,38 @@ export class AuthService {
         role: Role.CUSTOMER,
       },
     });
+  }
+
+  async changePassword(accountId: string, dto: ChangePasswordDto) {
+    const { currentPassword, newPassword, confirmPassword } = dto;
+
+    if (newPassword !== confirmPassword) {
+      throw new BadRequestException('Mật khẩu xác nhận không khớp');
+    }
+
+    const account = await this.accountRepository.findOne({
+      where: { id: accountId },
+      select: { id: true, password: true },
+    });
+
+    if (!account || !account.password) {
+      throw new UnauthorizedException('Không tìm thấy tài khoản');
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, account.password);
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException('Mật khẩu hiện tại không đúng');
+    }
+
+    const isSameAsOld = await bcrypt.compare(newPassword, account.password);
+    if (isSameAsOld) {
+      throw new UnprocessableEntityException('Mật khẩu mới không được giống mật khẩu cũ');
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    account.password = hashedNewPassword;
+    await this.accountRepository.save(account);
+
+    return { message: 'Đổi mật khẩu thành công' };
   }
 }
