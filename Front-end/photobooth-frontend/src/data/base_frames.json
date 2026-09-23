@@ -1,0 +1,98 @@
+[
+  {
+    "id": "2x2",
+    "session_type_supported": "single",
+    "layout_config": {
+      "canvas_width": 418,
+      "canvas_height": 537,
+      "slots": [
+        { "x": 24, "y": 24, "width": 173, "height": 187 },
+        { "x": 221, "y": 24, "width": 173, "height": 187 },
+        { "x": 24, "y": 235, "width": 173, "height": 187 },
+        { "x": 221, "y": 235, "width": 173, "height": 187 }
+      ]
+    }
+  },
+  {
+    "id": "1x4",
+    "session_type_supported": "single",
+    "layout_config": {
+      "canvas_width": 221,
+      "canvas_height": 959,
+      "slots": [
+        { "x": 24, "y": 24, "width": 173, "height": 187 },
+        { "x": 24, "y": 235, "width": 173, "height": 187 },
+        { "x": 24, "y": 446, "width": 173, "height": 187 },
+        { "x": 24, "y": 657, "width": 173, "height": 187 }
+      ]
+    }
+  },
+  {
+    "id": "3x2",
+    "session_type_supported": "single",
+    "layout_config": {
+      "canvas_width": 418,
+      "canvas_height": 748,
+      "slots": [
+        { "x": 24, "y": 24, "width": 173, "height": 187 },
+        { "x": 221, "y": 24, "width": 173, "height": 187 },
+        { "x": 24, "y": 235, "width": 173, "height": 187 },
+        { "x": 221, "y": 235, "width": 173, "height": 187 },
+        { "x": 24, "y": 446, "width": 173, "height": 187 },
+        { "x": 221, "y": 446, "width": 173, "height": 187 }
+      ]
+    }
+  },
+  {
+    "id": "2x3",
+    "session_type_supported": "single",
+    "layout_config": {
+      "canvas_width": 615,
+      "canvas_height": 537,
+      "slots": [
+        { "x": 24, "y": 24, "width": 173, "height": 187 },
+        { "x": 221, "y": 24, "width": 173, "height": 187 },
+        { "x": 418, "y": 24, "width": 173, "height": 187 },
+        { "x": 24, "y": 235, "width": 173, "height": 187 },
+        { "x": 221, "y": 235, "width": 173, "height": 187 },
+        { "x": 418, "y": 235, "width": 173, "height": 187 }
+      ]
+    }
+  },
+  {
+    "id": "4x2",
+    "session_type_supported": "single",
+    "layout_config": {
+      "canvas_width": 418,
+      "canvas_height": 959,
+      "slots": [
+        { "x": 24, "y": 24, "width": 173, "height": 187 },
+        { "x": 221, "y": 24, "width": 173, "height": 187 },
+        { "x": 24, "y": 235, "width": 173, "height": 187 },
+        { "x": 221, "y": 235, "width": 173, "height": 187 },
+        { "x": 24, "y": 446, "width": 173, "height": 187 },
+        { "x": 221, "y": 446, "width": 173, "height": 187 },
+        { "x": 24, "y": 657, "width": 173, "height": 187 },
+        { "x": 221, "y": 657, "width": 173, "height": 187 }
+      ]
+    }
+  },
+  {
+    "id": "2x4",
+    "session_type_supported": "single",
+    "layout_config": {
+      "canvas_width": 812,
+      "canvas_height": 537,
+      "slots": [
+        { "x": 24, "y": 24, "width": 173, "height": 187 },
+        { "x": 221, "y": 24, "width": 173, "height": 187 },
+        { "x": 418, "y": 24, "width": 173, "height": 187 },
+        { "x": 615, "y": 24, "width": 173, "height": 187 },
+        { "x": 24, "y": 235, "width": 173, "height": 187 },
+        { "x": 221, "y": 235, "width": 173, "height": 187 },
+        { "x": 418, "y": 235, "width": 173, "height": 187 },
+        { "x": 615, "y": 235, "width": 173, "height": 187 }
+      ]
+    }
+  }
+]

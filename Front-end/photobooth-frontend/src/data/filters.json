@@ -1,0 +1,68 @@
+[
+  {
+    "id": "normal",
+    "name": "Bình thường",
+    "description": "",
+    "cssFilter": "none",
+    "brightness": 1,
+    "contrast": 1,
+    "saturate": 1,
+    "sepia": 0,
+    "hueRotate": 0
+  },
+  {
+    "id": "bw",
+    "name": "Trắng Đen",
+    "description": "",
+    "cssFilter": "grayscale(100%) contrast(1.1)",
+    "brightness": 1,
+    "contrast": 1.1,
+    "saturate": 0,
+    "sepia": 0,
+    "hueRotate": 0
+  },
+  {
+    "id": "sepia",
+    "name": "Hoài Cổ",
+    "description": "",
+    "cssFilter": "sepia(80%)",
+    "brightness": 1,
+    "contrast": 1,
+    "saturate": 1,
+    "sepia": 0.8,
+    "hueRotate": 0
+  },
+  {
+    "id": "warm",
+    "name": "Ấm Áp",
+    "description": "",
+    "cssFilter": "sepia(30%) saturate(140%) hue-rotate(-10deg)",
+    "brightness": 1,
+    "contrast": 1,
+    "saturate": 1.4,
+    "sepia": 0.3,
+    "hueRotate": -10
+  },
+  {
+    "id": "cool",
+    "name": "Mát Mẻ",
+    "description": "",
+    "cssFilter": "saturate(120%) hue-rotate(10deg) contrast(1.05)",
+    "brightness": 1,
+    "contrast": 1.05,
+    "saturate": 1.2,
+    "sepia": 0,
+    "hueRotate": 10
+  },
+  {
+    "id": "vintage",
+    "name": "Vintage",
+    "description": "",
+    "cssFilter": "contrast(1.2) saturate(1.2) sepia(0.3)",
+    "brightness": 1,
+    "contrast": 1.2,
+    "saturate": 1.2,
+    "sepia": 0.3,
+    "hueRotate": 0
+  }
+]

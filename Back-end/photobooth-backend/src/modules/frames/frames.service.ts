@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { Frame } from './entities/frame.entity';
 
 @Injectable()
@@ -19,9 +19,24 @@ export class FramesService {
     return this.frameRepository.save(frame);
   }
 
-  findAll() {
+  findAll(name?: string) {
+    const where: any = { is_active: true };
+    if (name) {
+      where.name = ILike(`%${name}%`);
+    }
     return this.frameRepository.find({
-      where: { is_active: true },
+      where,
+      order: { sort_order: 'ASC' },
+    });
+  }
+
+  findByAspectRatio(aspectRatio: string, name?: string) {
+    const where: any = { is_active: true, aspect_ratio: aspectRatio as any };
+    if (name) {
+      where.name = ILike(`%${name}%`);
+    }
+    return this.frameRepository.find({
+      where,
       order: { sort_order: 'ASC' },
     });
   }

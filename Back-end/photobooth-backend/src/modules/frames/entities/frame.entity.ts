@@ -11,6 +11,19 @@ export enum SessionTypeSupported {
   BOTH = 'both',
 }
 
+export enum FrameAspectRatio {
+  GRID_2X2 = '2x2',
+  STRIP_1X4 = '1x4',
+  GRID_2X3 = '2x3',
+  GRID_3X3 = '3x3', // Ghi là 3x3 nhưng layout có thể là 3x2
+  GRID_2X4_VERTICAL = '2x4_vertical',
+  GRID_2X4_HORIZONTAL = '2x4_horizontal',
+  LAYOUT_5_3_2 = '5_3_2',
+  LAYOUT_5_2_3 = '5_2_3',
+  LAYOUT_7_4_3 = '7_4_3',
+  LAYOUT_7_3_4 = '7_3_4',
+}
+
 @Entity('frame')
 export class Frame {
   @PrimaryGeneratedColumn('uuid')
@@ -31,8 +44,8 @@ export class Frame {
   @Column()
   height: number;
 
-  @Column({ nullable: true })
-  aspect_ratio?: string;
+  @Column({ type: 'enum', enum: FrameAspectRatio, nullable: true })
+  aspect_ratio?: FrameAspectRatio;
 
   @Column({ type: 'enum', enum: SessionTypeSupported, default: SessionTypeSupported.BOTH })
   session_type_supported: SessionTypeSupported;

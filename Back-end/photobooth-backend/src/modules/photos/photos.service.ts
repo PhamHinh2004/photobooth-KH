@@ -33,9 +33,9 @@ export class PhotosService {
     await this.photoRepository.increment({ id }, 'download_count', 1);
   }
 
-  findByCustomer(customerId: string) {
+  findByAccount(accountId: string) {
     return this.photoRepository.find({
-      where: { customer_id: customerId },
+      where: { account_id: accountId },
       order: { created_at: 'DESC' },
       relations: { frame: true },
     });

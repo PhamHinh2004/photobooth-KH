@@ -13,8 +13,11 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { FramesModule } from './modules/frames/frames.module';
 import { PhotosModule } from './modules/photos/photos.module';
-import { StorageModule } from './modules/storage/storage.module';
 
+import { StorageModule } from './modules/storage/storage.module';
+import { GifsModule } from './modules/gifs/gifs.module';
+import { RecordingsModule } from './modules/recordings/recordings.module';
+import { SessionResultsModule } from './modules/session-results/session-results.module';
 @Module({
   imports: [
     // Cấu hình env
@@ -33,7 +36,11 @@ import { StorageModule } from './modules/storage/storage.module';
     CustomersModule,
     FramesModule,
     PhotosModule,
+
     StorageModule,
+    GifsModule,
+    RecordingsModule,
+    SessionResultsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

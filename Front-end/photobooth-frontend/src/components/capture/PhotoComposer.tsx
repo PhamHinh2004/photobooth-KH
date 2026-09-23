@@ -1,19 +1,13 @@
 import { useEffect, useRef, useState } from "react"
 import { Spin } from "antd"
 import type { Frame, LayoutSlot, FilterPreset } from "@/types/capture.types"
-
-function toProxiedUrl(url: string): string {
-  const r2Domain = import.meta.env.VITE_R2_PUBLIC_URL as string | undefined
-  if (r2Domain && url.startsWith(r2Domain)) {
-    return url.replace(r2Domain, "/r2-proxy")
-  }
-  return url
-}
+import baseFramesData from "@/data/base_frames.json"
 
 interface PhotoComposerProps {
-  photos: HTMLImageElement[]
+  photos: string[]
   frame: Frame
   filterPreset?: FilterPreset | null
+  bgColor?: string
   onComplete: (processedCanvas: HTMLCanvasElement, originalCanvas: HTMLCanvasElement) => void
 }
 
@@ -46,28 +40,46 @@ function drawImageCover(
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h)
 }
 
-function ensureLoaded(img: HTMLImageElement): Promise<HTMLImageElement> {
-  if (img.complete && img.naturalWidth > 0) return Promise.resolve(img)
+function loadImageFromUrl(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
+    // Proxy R2 public URL để bypass CORS khi vẽ lên canvas
+    const proxiedUrl = url.replace('https://pub-4eb303709ef24609a3b420990203812a.r2.dev', '/r2-proxy')
+
+    const img = new Image()
+    img.crossOrigin = "anonymous"
     const onLoad = () => { cleanup(); resolve(img) }
-    const onError = () => { cleanup(); reject(new Error("Ảnh chụp bị lỗi")) }
+    const onError = () => { cleanup(); reject(new Error("Lỗi tải ảnh")) }
     const cleanup = () => { img.removeEventListener("load", onLoad); img.removeEventListener("error", onError) }
+    
     img.addEventListener("load", onLoad)
     img.addEventListener("error", onError)
+    img.src = proxiedUrl
+    
     setTimeout(() => { cleanup(); reject(new Error("Timeout chờ ảnh")) }, 5000)
   })
 }
 
-export default function PhotoComposer({ photos, frame, filterPreset, onComplete }: PhotoComposerProps) {
+export default function PhotoComposer({ photos, frame, filterPreset, bgColor = '#ffffff', onComplete }: PhotoComposerProps) {
   const previewRef = useRef<HTMLDivElement>(null)
   const [composing, setComposing] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [debugInfo, setDebugInfo] = useState("")
+  const [debugInfo, setDebugInfo] = useState<string>("")
 
   useEffect(() => {
     async function compose() {
       try {
-        const { canvas_width, canvas_height, slots } = frame.layout_config
+        // Fallback to base_frames.json if layout from DB is incomplete or for testing "1x4"
+        const baseFramesList = Array.isArray(baseFramesData) ? baseFramesData : [baseFramesData]
+        const baseFrame = baseFramesList.find(b => b.id === frame.aspect_ratio || b.id === '1x4')
+        const layoutToUse = (frame.layout_config && frame.layout_config.slots?.length > 0)
+          ? frame.layout_config
+          : (baseFrame ? baseFrame.layout_config : null)
+
+        if (!layoutToUse) {
+          throw new Error(`Frame "${frame.name}" không có layout_config hợp lệ`)
+        }
+
+        const { canvas_width, canvas_height, slots } = layoutToUse
 
         console.log("[Composer] layout:", { canvas_width, canvas_height, slots_count: slots?.length })
         console.log("[Composer] photos:", photos.length)
@@ -78,7 +90,7 @@ export default function PhotoComposer({ photos, frame, filterPreset, onComplete 
 
         setDebugInfo(`${photos.length} ảnh - ${slots.length} slot - ${canvas_width}x${canvas_height}`)
 
-        const readyPhotos = await Promise.all(photos.map(ensureLoaded))
+        const readyPhotos = await Promise.all(photos.map(loadImageFromUrl))
 
         const originalCanvas = document.createElement("canvas")
         originalCanvas.width = canvas_width
@@ -90,7 +102,7 @@ export default function PhotoComposer({ photos, frame, filterPreset, onComplete 
           originalCtx.filter = filterPreset.cssFilter
         }
 
-        slots.forEach((slot, i) => {
+        slots.forEach((slot: LayoutSlot, i: number) => {
           const img = readyPhotos[i]
           if (!img) return
           drawImageCover(originalCtx, img, slot)
@@ -99,39 +111,21 @@ export default function PhotoComposer({ photos, frame, filterPreset, onComplete 
         // Reset filter for frame draw
         originalCtx.filter = 'none'
 
-        // Load frame image
-        const frameImg = new Image()
-        frameImg.crossOrigin = "anonymous"
-        frameImg.src = toProxiedUrl(frame.image_url)
-
-        await new Promise<void>((resolve, reject) => {
-          frameImg.onload = () => resolve()
-          frameImg.onerror = () => reject(new Error("Không tải được ảnh frame"))
-          setTimeout(() => reject(new Error("Frame timeout 10s")), 10000)
-        })
-
         // processedCanvas: FRAME + PHOTOS
         const processedCanvas = document.createElement("canvas")
         processedCanvas.width = canvas_width
         processedCanvas.height = canvas_height
         const processedCtx = processedCanvas.getContext("2d")!
 
-        // 1. Draw frame background
-        processedCtx.drawImage(frameImg, 0, 0, canvas_width, canvas_height)
+        // 1. Draw solid background
+        processedCtx.fillStyle = bgColor
+        processedCtx.fillRect(0, 0, canvas_width, canvas_height)
 
-        // 2. Draw photos with clipping inset and filter
-        const INSET = 6
-        slots.forEach((slot, i) => {
+        // 2. Draw photos into slots
+        slots.forEach((slot: LayoutSlot, i: number) => {
           const img = readyPhotos[i]
           if (!img) return
           processedCtx.save()
-          processedCtx.beginPath()
-          processedCtx.roundRect(
-            slot.x + INSET, slot.y + INSET,
-            slot.width - INSET * 2, slot.height - INSET * 2,
-            12
-          )
-          processedCtx.clip()
 
           if (filterPreset && filterPreset.cssFilter !== 'none') {
             processedCtx.filter = filterPreset.cssFilter
@@ -140,6 +134,23 @@ export default function PhotoComposer({ photos, frame, filterPreset, onComplete 
           drawImageCover(processedCtx, img, slot)
           processedCtx.restore()
         })
+
+        // 3. Draw Overlay Selected Frame (Đè frame PNG đục lỗ lên trên cùng)
+        if (frame.image_url) {
+          try {
+            console.log("[Composer] Bắt đầu tải frame overlay từ URL:", frame.image_url)
+            const frameOverlayImg = await loadImageFromUrl(frame.image_url)
+            console.log("[Composer] Đã tải frame overlay thành công, kích thước:", frameOverlayImg.width, "x", frameOverlayImg.height)
+            processedCtx.drawImage(frameOverlayImg, 0, 0, canvas_width, canvas_height)
+            console.log("[Composer] Đã vẽ frame overlay lên canvas.")
+          } catch (err) {
+            console.error("[Composer] Lỗi tải ảnh frame overlay, sử dụng ảnh gốc:", err)
+            throw new Error(`Không thể tải ảnh viền khung (frame). Lỗi: ${err instanceof Error ? err.message : String(err)}. Vui lòng kiểm tra lại đường truyền hoặc link ảnh: ${frame.image_url}`)
+          }
+        } else {
+          console.warn("[Composer] frame.image_url bị trống, không có ảnh khung nào được tải!")
+          throw new Error("Frame này chưa có ảnh viền (image_url trống), nên không thể ghép khung được.")
+        }
 
         if (previewRef.current) {
           previewRef.current.innerHTML = ""
@@ -159,8 +170,7 @@ export default function PhotoComposer({ photos, frame, filterPreset, onComplete 
     }
 
     compose()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [bgColor, filterPreset, frame, photos])
 
   if (error) {
     return (

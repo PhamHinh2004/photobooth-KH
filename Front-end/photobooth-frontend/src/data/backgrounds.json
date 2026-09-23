@@ -1,0 +1,10 @@
+[
+  { "id": "white", "name": "Classic White", "color": "#FFFFFF" },
+  { "id": "black", "name": "Moody Black", "color": "#111111" },
+  { "id": "pink", "name": "Pastel Pink", "color": "#FFC0CB" },
+  { "id": "blue", "name": "Baby Blue", "color": "#ADD8E6" },
+  { "id": "purple", "name": "Lilac Purple", "color": "#E6E6FA" },
+  { "id": "mint", "name": "Mint Green", "color": "#F5FFFA" },
+  { "id": "yellow", "name": "Butter Yellow", "color": "#FFFACD" },
+  { "id": "gray", "name": "Silver Gray", "color": "#D3D3D3" }
+]

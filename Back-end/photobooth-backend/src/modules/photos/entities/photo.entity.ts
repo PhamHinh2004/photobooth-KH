@@ -6,17 +6,12 @@ import {
   CreateDateColumn,
   JoinColumn,
 } from 'typeorm';
-import { Customer } from '../../customers/entities/customer.entity';
+import { Account } from '../../accounts/entities/account.entity';
 import { Frame } from '../../frames/entities/frame.entity';
 
 export enum MediaType {
   PHOTO = 'photo',
   VIDEO = 'video',
-}
-
-export enum SessionType {
-  SINGLE = 'single',
-  GROUP = 'group',
 }
 
 export enum PhotoStatus {
@@ -30,12 +25,12 @@ export class Photo {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Customer)
-  @JoinColumn({ name: 'customer_id' })
-  customer: Customer;
+  @ManyToOne(() => Account)
+  @JoinColumn({ name: 'account_id' })
+  account: Account;
 
   @Column()
-  customer_id: string;
+  account_id: string;
 
   @ManyToOne(() => Frame, { nullable: true })
   @JoinColumn({ name: 'frame_id' })
@@ -46,9 +41,6 @@ export class Photo {
 
   @Column({ type: 'enum', enum: MediaType })
   media_type: MediaType;
-
-  @Column({ type: 'enum', enum: SessionType })
-  session_type: SessionType;
 
   /** Mảng asset_id (icon/filter) đã áp dụng, lưu dạng jsonb */
   @Column({ type: 'jsonb', nullable: true })
