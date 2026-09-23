@@ -1,0 +1,68 @@
+[
+  {
+    "id": "2x2",
+    "title": "Vuông 2x2",
+    "subtitle": "4 ảnh bố cục 2 cột x 2 hàng",
+    "slotsCount": 4,
+    "shotsCount": 4,
+    "dimensions": "4x6 cm",
+    "icon": "🖼️",
+    "category": "grid",
+    "isPopular": true
+  },
+  {
+    "id": "1x4",
+    "title": "Dọc 1x4",
+    "subtitle": "4 ảnh dạng dải dọc 1 cột x 4 hàng",
+    "slotsCount": 4,
+    "shotsCount": 4,
+    "dimensions": "2x6 cm",
+    "icon": "🎞️",
+    "category": "strip",
+    "isPopular": true
+  },
+  {
+    "id": "3x2",
+    "title": "Dọc 3x2",
+    "subtitle": "6 ảnh bố cục 2 cột x 3 hàng",
+    "slotsCount": 6,
+    "shotsCount": 6,
+    "dimensions": "4x6 cm",
+    "icon": "📸",
+    "category": "grid",
+    "isPopular": false
+  },
+  {
+    "id": "2x3",
+    "title": "Ngang 2x3",
+    "subtitle": "6 ảnh bố cục ngang 3 cột x 2 hàng",
+    "slotsCount": 6,
+    "shotsCount": 6,
+    "dimensions": "6x4 cm",
+    "icon": "🖼️",
+    "category": "grid",
+    "isPopular": false
+  },
+  {
+    "id": "4x2",
+    "title": "Dọc 4x2",
+    "subtitle": "8 ảnh bố cục 2 cột x 4 hàng",
+    "slotsCount": 8,
+    "shotsCount": 8,
+    "dimensions": "4x8 cm",
+    "icon": "📏",
+    "category": "large",
+    "isPopular": false
+  },
+  {
+    "id": "2x4",
+    "title": "Ngang 2x4",
+    "subtitle": "8 ảnh bố cục ngang 4 cột x 2 hàng",
+    "slotsCount": 8,
+    "shotsCount": 8,
+    "dimensions": "8x4 cm",
+    "icon": "🔲",
+    "category": "large",
+    "isPopular": false
+  }
+]

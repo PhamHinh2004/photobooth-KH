@@ -1,14 +1,14 @@
 import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { SessionTypeSupported } from '../entities/frame.entity';
+import { SessionTypeSupported, FrameAspectRatio } from '../entities/frame.entity';
 
 export class CreateFrameDto {
   @IsString()
   name: string;
 
   @IsOptional()
-  @IsString()
-  aspect_ratio?: string;
+  @IsEnum(FrameAspectRatio)
+  aspect_ratio?: FrameAspectRatio;
 
   @IsOptional()
   @IsEnum(SessionTypeSupported)

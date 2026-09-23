@@ -1,9 +1,9 @@
 import { IsUUID, IsOptional, IsEnum } from 'class-validator';
-import { MediaType, SessionType } from '../entities/photo.entity';
+import { MediaType } from '../entities/photo.entity';
 
 export class CreatePhotoDto {
   @IsUUID()
-  customerId: string;
+  accountId: string;
 
   @IsOptional()
   @IsUUID()
@@ -12,6 +12,5 @@ export class CreatePhotoDto {
   @IsEnum(MediaType)
   mediaType: MediaType;
 
-  @IsEnum(SessionType)
-  sessionType: SessionType;
+
 }

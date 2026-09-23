@@ -32,14 +32,13 @@ export class PhotosController {
     schema: {
       type: 'object',
       properties: {
-        customerId: { type: 'string', example: 'uuid-cua-customer' },
+        accountId: { type: 'string', example: 'uuid-cua-account' },
         frameId: { type: 'string', example: 'uuid-cua-frame' },
         mediaType: { type: 'string', example: 'photo' },
-        sessionType: { type: 'string', example: 'single' },
         originalFile: { type: 'string', format: 'binary' },
         processedFile: { type: 'string', format: 'binary' },
       },
-      required: ['customerId', 'mediaType', 'sessionType', 'originalFile', 'processedFile'],
+      required: ['accountId', 'mediaType', 'originalFile', 'processedFile'],
     },
   })
   @UseInterceptors(
@@ -60,24 +59,23 @@ export class PhotosController {
       throw new BadRequestException('Cần upload đủ cả originalFile và processedFile');
     }
 
-    // 1. Upload cả 2 file lên R2, đặt theo thư mục riêng của customer
+    // 1. Upload cả 2 file lên R2, đặt theo thư mục riêng của account
     const originalUrl = await this.storageService.uploadFile(
-      `photos/${dto.customerId}`,
+      `photos/${dto.accountId}`,
       originalFile.buffer,
       this.extractExt(originalFile.originalname),
     );
     const processedUrl = await this.storageService.uploadFile(
-      `photos/${dto.customerId}`,
+      `photos/${dto.accountId}`,
       processedFile.buffer,
       this.extractExt(processedFile.originalname),
     );
 
     // 2. Tạo record Photo
     return this.photosService.create({
-      customer_id: dto.customerId,
+      account_id: dto.accountId,
       frame_id: dto.frameId ?? undefined,
       media_type: dto.mediaType,
-      session_type: dto.sessionType,
       original_file_url: originalUrl,
       processed_file_url: processedUrl,
       thumbnail_url: processedUrl, // tạm dùng chung, có thể generate thumbnail riêng sau

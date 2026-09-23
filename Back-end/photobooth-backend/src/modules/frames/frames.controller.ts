@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   Param,
+  Query,
   Post,
   UploadedFile,
   UseGuards,
@@ -121,8 +122,17 @@ export class FramesController {
 
   @Get()
   @ApiOperation({ summary: 'Danh sách frame (public — dùng khi khách chọn frame)' })
-  findAll() {
-    return this.framesService.findAll();
+  findAll(@Query('name') name?: string) {
+    return this.framesService.findAll(name);
+  }
+
+  @Get('aspect-ratio/:aspectRatio')
+  @ApiOperation({ summary: 'Danh sách frame theo aspect ratio' })
+  findByAspectRatio(
+    @Param('aspectRatio') aspectRatio: string,
+    @Query('name') name?: string,
+  ) {
+    return this.framesService.findByAspectRatio(aspectRatio, name);
   }
 
   @Delete(':id')
