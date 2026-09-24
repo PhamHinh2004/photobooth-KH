@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import appConfig from './config/app.config';
@@ -13,11 +14,14 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { FramesModule } from './modules/frames/frames.module';
 import { PhotosModule } from './modules/photos/photos.module';
-
 import { StorageModule } from './modules/storage/storage.module';
 import { GifsModule } from './modules/gifs/gifs.module';
 import { RecordingsModule } from './modules/recordings/recordings.module';
 import { SessionResultsModule } from './modules/session-results/session-results.module';
+import { PostsModule } from './modules/posts/posts.module';
+import { CommentsModule } from './modules/comments/comments.module';
+import { SocialModule } from './modules/social/social.module';
+
 @Module({
   imports: [
     // Cấu hình env
@@ -26,6 +30,9 @@ import { SessionResultsModule } from './modules/session-results/session-results.
       load: [appConfig, databaseConfig, jwtConfig, mailConfig, r2Config],
       envFilePath: '.env',
     }),
+
+    // Event Emitter global
+    EventEmitterModule.forRoot(),
 
     // Database
     DatabaseModule,
@@ -36,11 +43,13 @@ import { SessionResultsModule } from './modules/session-results/session-results.
     CustomersModule,
     FramesModule,
     PhotosModule,
-
     StorageModule,
     GifsModule,
     RecordingsModule,
     SessionResultsModule,
+    PostsModule,
+    CommentsModule,
+    SocialModule,
   ],
   controllers: [AppController],
   providers: [AppService],

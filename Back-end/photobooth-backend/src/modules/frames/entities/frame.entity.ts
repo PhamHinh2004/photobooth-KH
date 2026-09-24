@@ -15,6 +15,7 @@ export enum FrameAspectRatio {
   GRID_2X2 = '2x2',
   STRIP_1X4 = '1x4',
   GRID_2X3 = '2x3',
+  GRID_3X2 = '3x2',
   GRID_3X3 = '3x3', // Ghi là 3x3 nhưng layout có thể là 3x2
   GRID_2X4_VERTICAL = '2x4_vertical',
   GRID_2X4_HORIZONTAL = '2x4_horizontal',
