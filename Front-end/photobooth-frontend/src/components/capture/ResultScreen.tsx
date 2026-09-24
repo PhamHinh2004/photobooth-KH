@@ -68,7 +68,7 @@ export default function ResultScreen({
       ])
 
       const result = await savePhoto({
-        customerId,
+        accountId: customerId,
         frameId: frame.id,
         processedBlob,
         originalBlob,
@@ -128,11 +128,10 @@ export default function ResultScreen({
               <button
                 onClick={handleSaveAndDownload}
                 disabled={saving}
-                className={`w-full py-4 rounded-2xl font-black text-base transition-all duration-300 flex items-center justify-center gap-2 ${
-                  saving
+                className={`w-full py-4 rounded-2xl font-black text-base transition-all duration-300 flex items-center justify-center gap-2 ${saving
                     ? 'bg-white/10 text-white/40 cursor-not-allowed'
                     : 'bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 text-white shadow-[0_0_25px_rgba(233,69,96,0.5)] hover:shadow-[0_0_35px_rgba(233,69,96,0.8)] hover:scale-[1.02]'
-                }`}
+                  }`}
               >
                 {saving ? (
                   <span>⏳ Đang lưu ảnh lên hệ thống...</span>

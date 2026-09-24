@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
+import type { PointerEvent as ReactPointerEvent } from "react"
 import { Spin } from "antd"
-import type { Frame, LayoutSlot, FilterPreset } from "@/types/capture.types"
+import type { Frame, LayoutSlot, FilterPreset, PhotoSticker } from "@/types/capture.types"
 import baseFramesData from "@/data/base_frames.json"
 
 interface PhotoComposerProps {
@@ -8,6 +9,8 @@ interface PhotoComposerProps {
   frame: Frame
   filterPreset?: FilterPreset | null
   bgColor?: string
+  stickers?: PhotoSticker[]
+  onStickerMove?: (id: string, x: number, y: number) => void
   onComplete: (processedCanvas: HTMLCanvasElement, originalCanvas: HTMLCanvasElement) => void
 }
 
@@ -59,7 +62,7 @@ function loadImageFromUrl(url: string): Promise<HTMLImageElement> {
   })
 }
 
-export default function PhotoComposer({ photos, frame, filterPreset, bgColor = '#ffffff', onComplete }: PhotoComposerProps) {
+export default function PhotoComposer({ photos, frame, filterPreset, bgColor = '#ffffff', stickers = [], onStickerMove, onComplete }: PhotoComposerProps) {
   const previewRef = useRef<HTMLDivElement>(null)
   const [composing, setComposing] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -152,6 +155,31 @@ export default function PhotoComposer({ photos, frame, filterPreset, bgColor = '
           throw new Error("Frame này chưa có ảnh viền (image_url trống), nên không thể ghép khung được.")
         }
 
+        for (const sticker of stickers) {
+          processedCtx.save()
+          const x = sticker.x * canvas_width
+          const y = sticker.y * canvas_height
+          const size = sticker.size * canvas_width
+          processedCtx.translate(x, y)
+          processedCtx.rotate((sticker.rotation * Math.PI) / 180)
+          processedCtx.font = `${size}px sans-serif`
+          processedCtx.textAlign = 'center'
+          processedCtx.textBaseline = 'middle'
+          processedCtx.shadowColor = sticker.outlineColor
+          processedCtx.shadowBlur = Math.max(2, size * 0.08)
+          if (sticker.src.startsWith('emoji:')) {
+            processedCtx.fillText(sticker.src.slice(6), 0, 0)
+          } else {
+            try {
+              const stickerImage = await loadImageFromUrl(sticker.src)
+              processedCtx.drawImage(stickerImage, -size / 2, -size / 2, size, size)
+            } catch (stickerError) {
+              console.warn('[Composer] Không tải được sticker:', stickerError)
+            }
+          }
+          processedCtx.restore()
+        }
+
         if (previewRef.current) {
           previewRef.current.innerHTML = ""
           processedCanvas.style.width = "100%"
@@ -170,7 +198,7 @@ export default function PhotoComposer({ photos, frame, filterPreset, bgColor = '
     }
 
     compose()
-  }, [bgColor, filterPreset, frame, photos])
+  }, [bgColor, filterPreset, frame, photos, stickers])
 
   if (error) {
     return (
@@ -190,10 +218,28 @@ export default function PhotoComposer({ photos, frame, filterPreset, bgColor = '
           {debugInfo && <p className="text-white/30 text-xs font-mono">{debugInfo}</p>}
         </div>
       )}
-      <div
-        ref={previewRef}
-        className={composing ? "opacity-0 h-0 overflow-hidden" : "opacity-100 transition-opacity duration-500"}
-      />
+      <div className={composing ? "opacity-0 h-0 overflow-hidden" : "opacity-100 transition-opacity duration-500 relative"}>
+        <div ref={previewRef} />
+        {!composing && stickers.map((sticker) => (
+          <button
+            key={sticker.id}
+            type="button"
+            aria-label={`Di chuyển ${sticker.label}`}
+            className="absolute z-10 -translate-x-1/2 -translate-y-1/2 cursor-move rounded-lg border-2 border-dashed border-fuchsia-400/70 bg-white/10 p-1 touch-none"
+            style={{ left: `${sticker.x * 100}%`, top: `${sticker.y * 100}%`, width: `${sticker.size * 100}%`, aspectRatio: '1', transform: `translate(-50%, -50%) rotate(${sticker.rotation}deg)` }}
+            onPointerDown={(event) => {
+              event.currentTarget.setPointerCapture(event.pointerId)
+            }}
+            onPointerMove={(event: ReactPointerEvent<HTMLButtonElement>) => {
+              const rect = event.currentTarget.parentElement?.getBoundingClientRect()
+              if (!rect || !onStickerMove) return
+              onStickerMove(sticker.id, Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)), Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)))
+            }}
+          >
+            {sticker.src.startsWith('emoji:') ? sticker.src.slice(6) : <img src={sticker.src} alt="" className="h-full w-full object-contain" />}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

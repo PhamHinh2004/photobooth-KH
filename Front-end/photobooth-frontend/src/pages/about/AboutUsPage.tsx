@@ -1,5 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '@/stores/auth.store'
 import PublicLayout from '@/components/layouts/PublicLayout'
 import './AboutUsPage.css'
 
@@ -20,6 +21,7 @@ const teamMembers = [
 
 const AboutUsPage: React.FC = () => {
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuthStore()
 
   return (
     <PublicLayout>
@@ -39,7 +41,7 @@ const AboutUsPage: React.FC = () => {
 
         <section className="about-connect"><div><p className="about-kicker">04 / STAY CONNECTED</p><br/><h2>Điều gì đó<br /><em>đẹp đang đến.</em></h2></div><div className="about-connect-copy"><p>Theo dõi hành trình của KH Booth và chia sẻ những khoảnh khắc của bạn cùng chúng mình.</p><div className="about-socials"><a href="https://www.facebook.com" target="_blank" rel="noreferrer">Facebook <span>↗</span></a><a href="https://www.instagram.com" target="_blank" rel="noreferrer">Instagram <span>↗</span></a><a href="mailto:hello@khbooth.vn">Email <span>↗</span></a></div></div></section>
 
-        <section className="about-cta"><div><p className="about-kicker">YOUR NEXT MEMORY</p><h2>Sẵn sàng tạo một<br /><em>kỷ niệm mới?</em></h2></div><button onClick={() => navigate('/')} className="about-cta-button">CHỤP NGAY <span>↗</span></button></section>
+        <section className="about-cta"><div><p className="about-kicker">YOUR NEXT MEMORY</p><h2>Sẵn sàng tạo một<br /><em>kỷ niệm mới?</em></h2></div><button onClick={() => navigate(isAuthenticated ? '/capture' : '/login')} className="about-cta-button">CHỤP NGAY <span>↗</span></button></section>
         </main>
       </div>
 
