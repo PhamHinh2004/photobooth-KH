@@ -16,7 +16,7 @@ import CameraCapture from '@/components/capture/step3/CameraCapture'
 import ReviewScreen from '@/components/capture/step4/ReviewScreen'
 import FilterScreen from '@/components/capture/step5/FilterScreen'
 
-import type { PackageOption, Frame, FilterPreset } from '@/types/capture.types'
+import type { GifRecord, PackageOption, Frame, FilterPreset, PhotoRecord, RecordingRecord } from '@/types/capture.types'
 import stepsData from '@/data/steps.json'
 
 export default function CapturePage() {
@@ -39,6 +39,11 @@ export default function CapturePage() {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadedResults, setUploadedResults] = useState<{
+    photo: PhotoRecord | null
+    recording: RecordingRecord | null
+    gif: GifRecord | null
+  }>({ photo: null, recording: null, gif: null })
 
   // Customer ID
   const [customerId, setCustomerId] = useState<string | null>(null)
@@ -84,7 +89,6 @@ export default function CapturePage() {
   }
 
   function handleFilterComplete(processedCanvas: HTMLCanvasElement, originalCanvas: HTMLCanvasElement, _filter: FilterPreset, _bgColor: string) {
-    // Generate blobs and proceed to result step
     processedCanvas.toBlob((pBlob) => {
       if (pBlob) setProcessedPhotoBlob(pBlob)
       originalCanvas.toBlob((oBlob) => {
@@ -102,62 +106,51 @@ export default function CapturePage() {
         setUploadError(null)
 
         try {
-          const accountId = String(user.id)
-          
-          // Tạo các promises để upload song song
-          const uploadPromises: Promise<any>[] = []
+          const uploads = await Promise.all([
+            savePhoto({
+              accountId: String(user.id),
+              frameId: selectedFrame?.id,
+              processedBlob: processedPhotoBlob,
+              originalBlob: originalPhotoBlob,
+            }),
+            recordingBlob
+              ? saveRecording({
+                  accountId: String(user.id),
+                  videoBlob: recordingBlob,
+                })
+              : Promise.resolve(null),
+            gifBlob
+              ? saveGif({
+                  accountId: String(user.id),
+                  gifType: 'standard',
+                  gifBlob: gifBlob,
+                })
+              : Promise.resolve(null),
+          ])
 
-          // 1. Upload Photo
-          const photoPromise = savePhoto({
-            accountId: accountId,
-            frameId: selectedFrame?.id,
-            processedBlob: processedPhotoBlob,
-            originalBlob: originalPhotoBlob,
-          })
-          uploadPromises.push(photoPromise)
+          const photoRes = uploads[0]
+          const recordingRes = uploads[1]
+          const gifRes = uploads[2]
 
-          // 2. Upload Recording (Nếu có)
-          let recordingPromise: Promise<any> | null = null
-          if (recordingBlob) {
-            recordingPromise = saveRecording({
-              accountId,
-              videoBlob: recordingBlob
-            })
-            uploadPromises.push(recordingPromise)
-          }
-
-          // 3. Upload GIF (Nếu có)
-          let gifPromise: Promise<any> | null = null
-          if (gifBlob) {
-            gifPromise = saveGif({
-              accountId,
-              gifType: 'standard',
-              gifBlob: gifBlob
-            })
-            uploadPromises.push(gifPromise)
-          }
-
-          // Đợi tất cả upload xong
-          const results = await Promise.all(uploadPromises)
-
-          // Phân tích kết quả
-          const photoRecord = results[0]
-          const recordingRecord = recordingPromise ? results[uploadPromises.indexOf(recordingPromise)] : null
-          const gifRecord = gifPromise ? results[uploadPromises.indexOf(gifPromise)] : null
-
-          // 4. Tạo Session Result
-          await createSessionResult({
-            accountId,
-            sessionType: 'single',
-            photoId: photoRecord?.id,
-            recordingId: recordingRecord?.id,
-            gifId: gifRecord?.id
+          setUploadedResults({
+            photo: photoRes,
+            recording: recordingRes,
+            gif: gifRes,
           })
 
+          const sessionPayload = {
+            accountId: String(user.id),
+            sessionType: 'single' as const,
+            photoId: photoRes?.id,
+            recordingId: recordingRes ? recordingRes.id : undefined,
+            gifId: gifRes ? gifRes.id : undefined,
+          }
+
+          await createSessionResult(sessionPayload)
           setUploadSuccess(true)
         } catch (err: any) {
-          console.error('Upload Error:', err)
-          setUploadError(err.message || 'Có lỗi xảy ra khi lưu trữ dữ liệu.')
+          console.error('Lỗi khi tải kết quả lên:', err)
+          setUploadError(err.message || 'Lưu kết quả thất bại')
         } finally {
           setIsUploading(false)
         }
@@ -165,108 +158,156 @@ export default function CapturePage() {
 
       performUpload()
     }
-  }, [step, processedPhotoBlob, originalPhotoBlob, customerId, user])
+  }, [step, customerId, user, processedPhotoBlob, originalPhotoBlob, recordingBlob, gifBlob, selectedFrame])
 
   const steps = stepsData
   const currentStepIdx = steps.findIndex(s => s.key === step)
 
+  // Step labels matching Figma design
+  const stepLabels = [
+    { key: 'package-select', label: 'Chọn Frame',        icon: '▣' },
+    { key: 'frame-select',   label: 'Chọn Style Frame',  icon: '✨' },
+    { key: 'capturing',      label: 'Chụp Ảnh',          icon: '📷' },
+    { key: 'review',         label: 'Review Ảnh',        icon: '🔄' },
+    { key: 'filter',         label: 'Hậu Kỳ & Sticker',  icon: '🎨' },
+    { key: 'result',         label: 'Nhận Kết Quả',      icon: '🎁' },
+  ]
+
   return (
-    <div
-      className="min-h-screen text-slate-100 font-sans pb-16"
-      style={{
-        background: 'linear-gradient(135deg, #090a0f 0%, #150d2a 40%, #0f172a 70%, #080c19 100%)',
+    <div 
+      className="min-h-screen flex flex-col"
+      style={{ 
+        fontFamily: "'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif",
+        backgroundColor: '#f8f9fa',
+        backgroundImage: `
+          radial-gradient(1200px circle at 0% 0%, rgba(255, 0, 255, 0.05) 0%, transparent 60%),
+          radial-gradient(1200px circle at 100% 0%, rgba(137, 207, 240, 0.18) 0%, transparent 60%),
+          radial-gradient(1000px circle at 50% 100%, rgba(229, 228, 226, 0.5) 0%, transparent 60%)
+        `
       }}
     >
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div
-          className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full opacity-20 blur-3xl"
-          style={{ background: 'radial-gradient(circle, #e94560, transparent 70%)' }}
-        />
-        <div
-          className="absolute top-1/2 -right-40 w-[500px] h-[500px] rounded-full opacity-15 blur-3xl"
-          style={{ background: 'radial-gradient(circle, #7c3aed, transparent 70%)' }}
-        />
+      {/* ══════════════════════════════════════
+          TOP NAVBAR (Figma Hình 1)
+      ══════════════════════════════════════ */}
+      <nav className="w-full bg-white/70 backdrop-blur-md border-b border-white/60 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          {/* Logo KH BOOTH AI */}
+          <div 
+            onClick={() => navigate('/')} 
+            className="flex items-center gap-2 cursor-pointer select-none"
+          >
+            <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-fuchsia-600 via-purple-600 to-sky-500 bg-clip-text text-transparent">
+              KH BOOTH
+            </span>
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-600 border border-sky-200">
+              AI
+            </span>
+          </div>
+
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center gap-8 text-xs sm:text-sm font-medium text-gray-600">
+            <button onClick={() => navigate('/')} className="hover:text-gray-900 transition-colors cursor-pointer bg-transparent border-0">Trang Chủ</button>
+            <button onClick={() => setStep('package-select')} className="text-gray-900 font-semibold cursor-pointer bg-transparent border-0">Chụp Đơn</button>
+            <button onClick={() => navigate('/')} className="hover:text-gray-900 transition-colors cursor-pointer bg-transparent border-0">Chụp Nhóm</button>
+            <button onClick={() => navigate('/about-us')} className="hover:text-gray-900 transition-colors cursor-pointer bg-transparent border-0">Về Chúng Tôi</button>
+            <button onClick={() => navigate('/')} className="hover:text-gray-900 transition-colors cursor-pointer bg-transparent border-0">Chính Sách</button>
+          </div>
+
+          {/* CTA & Avatar */}
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setStep('package-select')}
+              className="px-4 py-2 rounded-full bg-gradient-to-r from-[#89CFF0] to-[#38bdf8] text-gray-900 font-bold text-xs shadow-sm hover:opacity-95 transition-all flex items-center gap-1.5 cursor-pointer border-0"
+            >
+              <span>BẮT ĐẦU CHỤP</span>
+              <span>✨</span>
+            </button>
+            <div 
+              onClick={() => navigate('/profile')}
+              className="w-8 h-8 rounded-full bg-sky-800 text-white flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-90"
+              title={user?.name || 'Tài khoản'}
+            >
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+              ) : (
+                '👤'
+              )}
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* ══════════════════════════════════════
+          STEP PROGRESS BAR (Figma Hình 1)
+      ══════════════════════════════════════ */}
+      <div className="w-full px-4 pt-4 pb-2">
+        <div className="max-w-4xl mx-auto bg-white/80 backdrop-blur-md rounded-full px-4 sm:px-6 py-2 border border-[#E5E4E2] shadow-sm flex items-center justify-between overflow-x-auto">
+          {stepLabels.map((item, idx) => {
+            const isPast    = idx < currentStepIdx
+            const isCurrent = idx === currentStepIdx
+
+            return (
+              <div key={item.key} className="flex items-center flex-shrink-0">
+                <button
+                  onClick={() => {
+                    if (isPast) {
+                      const keys = ['package-select', 'frame-select', 'capturing', 'review', 'filter', 'result']
+                      setStep(keys[idx] as any)
+                    }
+                  }}
+                  disabled={!isPast && !isCurrent}
+                  className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold transition-all duration-200 whitespace-nowrap rounded-full ${
+                    isCurrent
+                      ? 'bg-[#2d3139] text-white shadow-sm'
+                      : isPast
+                        ? 'bg-[#489ba5] text-white hover:opacity-90 cursor-pointer shadow-xs'
+                        : 'text-gray-400 cursor-default'
+                  }`}
+                >
+                  {isCurrent ? (
+                    <>
+                      <span>{idx === 0 ? '▣' : '✨'}</span>
+                      <span>{item.label}</span>
+                    </>
+                  ) : isPast ? (
+                    <>
+                      <span className="text-[10px] font-black">✓</span>
+                      <span>{item.label}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{idx + 1}</span>
+                      <span>{item.label}</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Pipe separator */}
+                {idx < stepLabels.length - 1 && (
+                  <span className="text-gray-300 text-xs mx-2 select-none">|</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 pt-6">
-        <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/10">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-500 flex items-center justify-center text-xl shadow-[0_0_15px_rgba(233,69,96,0.6)]">
-              📸
-            </div>
-            <div>
-              <h1 className="text-xl font-black tracking-tight text-white">
-                KH <span className="text-pink-500">PHOTOBOOTH</span>
-              </h1>
-              <p className="text-[10px] text-white/40 font-medium tracking-wider uppercase">Studio Kỷ Niệm 4.0</p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => navigate('/')}
-            className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-xs font-semibold border border-white/10 transition-all"
-          >
-            Về Trang Chủ
-          </button>
-        </div>
-
-        <div className="w-full max-w-4xl mx-auto mb-8 overflow-x-auto overflow-y-hidden pb-8 pt-2 scroll-smooth scrollbar-thin scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20">
-          <div className="flex items-center justify-between min-w-[650px] px-2">
-            {steps.map((item, idx) => {
-              const isPast = idx < currentStepIdx
-              const isCurrent = idx === currentStepIdx
-              
-              return (
-                <div key={item.key} className="flex items-center flex-1 last:flex-initial">
-                  <div className="flex flex-col items-center group cursor-default relative">
-                    <div
-                      className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm transition-all duration-300 z-10 ${
-                        isPast
-                          ? 'bg-pink-500 text-white shadow-[0_0_15px_rgba(233,69,96,0.5)] cursor-pointer'
-                          : isCurrent
-                            ? 'bg-gradient-to-tr from-pink-500 to-rose-500 text-white shadow-[0_0_25px_rgba(233,69,96,0.8)] scale-110 ring-4 ring-pink-500/20'
-                            : 'bg-white/5 text-white/30 border border-white/10'
-                      }`}
-                      onClick={() => {
-                        if (isPast && idx === 0) setStep('package-select')
-                      }}
-                    >
-                      {isPast ? '✓' : item.icon}
-                    </div>
-                    <span
-                      className={`absolute top-12 text-[10px] font-bold whitespace-nowrap transition-colors ${
-                        isCurrent ? 'text-pink-400' : isPast ? 'text-white/70' : 'text-white/20'
-                      }`}
-                    >
-                      {item.label}
-                    </span>
-                  </div>
-
-                  {idx < steps.length - 1 && (
-                    <div
-                      className={`h-1 flex-1 mx-2 rounded-full transition-all duration-500 z-0 ${
-                        idx < currentStepIdx ? 'bg-gradient-to-r from-pink-500 to-rose-500 shadow-[0_0_10px_rgba(233,69,96,0.5)]' : 'bg-white/10'
-                      }`}
-                    />
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
+      {/* ══════════════════════════════════════
+          MAIN CONTENT AREA
+      ══════════════════════════════════════ */}
+      <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 pt-6 pb-12">
         {customerLoading && (
           <div className="flex justify-center py-16">
-            <Spin tip="Đang tải studio..." />
+            <Spin tip="Đang tải studio..." size="large" />
           </div>
         )}
 
         {customerError && (
-          <div className="bg-red-500/20 border border-red-500/30 rounded-3xl p-8 text-center max-w-md mx-auto my-8">
-            <p className="text-red-300 mb-4">{customerError}</p>
+          <div className="bg-red-50 border border-red-200 rounded-3xl p-8 text-center max-w-md mx-auto my-8">
+            <p className="text-red-600 mb-4">{customerError}</p>
             <button
               onClick={() => navigate('/login')}
-              className="px-6 py-2.5 rounded-xl bg-pink-500 text-white font-bold text-sm shadow-lg hover:bg-pink-600 transition-all"
+              className="px-6 py-2.5 rounded-xl bg-red-500 text-white font-bold text-sm shadow-lg hover:bg-red-600 transition-all cursor-pointer"
             >
               Đăng nhập lại
             </button>
@@ -274,7 +315,7 @@ export default function CapturePage() {
         )}
 
         {!customerLoading && !customerError && (
-          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-[32px] p-4 sm:p-8 md:p-10 shadow-[0_0_50px_rgba(0,0,0,0.5)] min-h-[500px]">
+          <div className="min-h-[500px]">
             {step === 'package-select' && (
               <PackageSelector onSelectPackage={handleSelectPackage} />
             )}
@@ -299,6 +340,7 @@ export default function CapturePage() {
             {step === 'review' && (
               <ReviewScreen
                 photos={capturedPhotos}
+                onPhotosChange={setCapturedPhotos}
                 onRetake={() => setStep('capturing')}
                 onNext={handleReviewComplete}
               />
@@ -314,30 +356,50 @@ export default function CapturePage() {
             )}
 
             {step === 'result' && (
-              <div className="w-full max-w-2xl mx-auto text-center text-white p-10 bg-white/5 rounded-3xl border border-white/10 flex flex-col items-center justify-center">
+              <div className="w-full max-w-2xl mx-auto text-center p-10 bg-white/90 backdrop-blur-sm rounded-3xl border border-[#E5E4E2] flex flex-col items-center justify-center mt-4 shadow-sm">
                 {isUploading ? (
                   <>
-                    <div className="w-20 h-20 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mb-6" />
-                    <h2 className="text-3xl font-black mb-2 animate-pulse">ĐANG TẢI LÊN...</h2>
-                    <p className="text-white/60">Vui lòng đợi trong giây lát, hệ thống đang lưu ảnh, video và GIF của bạn.</p>
+                    <div className="w-20 h-20 border-4 border-[#FF00FF] border-t-transparent rounded-full animate-spin mb-6" />
+                    <h2 className="text-3xl font-black mb-2 animate-pulse text-gray-900">ĐANG TẢI LÊN...</h2>
+                    <p className="text-gray-500">Vui lòng đợi trong giây lát, hệ thống đang lưu ảnh, video và GIF của bạn.</p>
                   </>
                 ) : uploadError ? (
                   <>
                     <div className="text-6xl mb-4">❌</div>
-                    <h2 className="text-3xl font-black mb-2 text-red-400">LỖI TẢI LÊN</h2>
-                    <p className="text-white/60 mb-8">{uploadError}</p>
+                    <h2 className="text-3xl font-black mb-2 text-red-500">LỖI TẢI LÊN</h2>
+                    <p className="text-gray-500 mb-8">{uploadError}</p>
                     <button
-                      onClick={() => setStep('filter')} // Cho phép thử lại bằng cách quay lại bước filter
-                      className="px-8 py-3 rounded-full bg-red-500/20 text-red-300 border border-red-500/50 font-bold hover:bg-red-500/40 transition-all"
+                      onClick={() => setStep('filter')}
+                      className="px-8 py-3 rounded-full bg-red-50 text-red-500 border border-red-200 font-bold hover:bg-red-100 transition-all cursor-pointer"
                     >
-                      Quay Lại & Thử Lại
+                      Quay Lại &amp; Thử Lại
                     </button>
                   </>
                 ) : uploadSuccess ? (
                   <>
                     <div className="text-6xl mb-4">🎉</div>
-                    <h2 className="text-3xl font-black mb-4">KẾT QUẢ ĐÃ SẴN SÀNG!</h2>
-                    <p className="text-white/70">Ảnh, Video và GIF của bạn đã được lưu an toàn. Vui lòng lấy ảnh ở máy in hoặc quét mã QR.</p>
+                    <h2 className="text-3xl font-black mb-4 text-gray-900">KẾT QUẢ ĐÃ SẴN SÀNG!</h2>
+                    <p className="text-gray-500 mb-6">Ảnh, GIF và video hậu trường đã được lưu thành công.</p>
+                    <div className="grid w-full gap-3 text-left sm:grid-cols-3">
+                      {uploadedResults.photo?.processed_file_url && (
+                        <a href={uploadedResults.photo.processed_file_url} target="_blank" rel="noreferrer" className="rounded-2xl border border-slate-200 bg-slate-50 p-3 hover:border-fuchsia-400">
+                          <img src={uploadedResults.photo.processed_file_url} alt="Ảnh cuối cùng" className="mb-2 aspect-square w-full rounded-xl object-contain" />
+                          <span className="text-xs font-bold text-slate-700">Ảnh cuối cùng</span>
+                        </a>
+                      )}
+                      {uploadedResults.gif && (
+                        <a href={uploadedResults.gif.image_url} target="_blank" rel="noreferrer" className="rounded-2xl border border-slate-200 bg-slate-50 p-3 hover:border-fuchsia-400">
+                          <img src={uploadedResults.gif.image_url} alt="GIF hậu kỳ" className="mb-2 aspect-square w-full rounded-xl object-contain" />
+                          <span className="text-xs font-bold text-slate-700">GIF</span>
+                        </a>
+                      )}
+                      {uploadedResults.recording?.file_url && (
+                        <a href={uploadedResults.recording.file_url} target="_blank" rel="noreferrer" className="rounded-2xl border border-slate-200 bg-slate-50 p-3 hover:border-fuchsia-400">
+                          <video src={uploadedResults.recording.file_url} controls className="mb-2 aspect-square w-full rounded-xl object-contain" />
+                          <span className="text-xs font-bold text-slate-700">Video hậu trường</span>
+                        </a>
+                      )}
+                    </div>
                     <button
                       onClick={() => {
                         setStep('package-select')
@@ -346,8 +408,9 @@ export default function CapturePage() {
                         setSelectedFrame(null)
                         setRecordingBlob(null)
                         setGifBlob(null)
+                        setUploadedResults({ photo: null, recording: null, gif: null })
                       }}
-                      className="mt-8 px-8 py-3 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold shadow-[0_0_20px_rgba(233,69,96,0.6)] hover:scale-105 transition-all"
+                      className="mt-8 px-8 py-3 rounded-full bg-gradient-to-r from-[#FF00FF] to-[#89CFF0] text-white font-bold shadow-lg hover:scale-105 transition-all cursor-pointer"
                     >
                       Chụp Lượt Mới
                     </button>
@@ -357,7 +420,24 @@ export default function CapturePage() {
             )}
           </div>
         )}
-      </div>
+      </main>
+
+      {/* ══════════════════════════════════════
+          FOOTER (Figma Hình 1)
+      ══════════════════════════════════════ */}
+      <footer className="w-full border-t border-gray-200/60 py-6 px-6 bg-white/40 backdrop-blur-xs mt-auto">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
+          <div className="flex items-center gap-2">
+            <span className="font-extrabold text-sm tracking-tight text-[#d946ef]">KH BOOTH</span>
+            <span>© 2026 Photobooth AI Y2K. All rights reserved.</span>
+          </div>
+          <div className="flex items-center gap-6">
+            <button onClick={() => navigate('/about-us')} className="hover:text-gray-800 transition-colors cursor-pointer bg-transparent border-0">Về Chúng Tôi</button>
+            <button onClick={() => navigate('/')} className="hover:text-gray-800 transition-colors cursor-pointer bg-transparent border-0">Điều Khoản</button>
+            <button onClick={() => navigate('/')} className="hover:text-gray-800 transition-colors cursor-pointer bg-transparent border-0">Bảo Mật</button>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

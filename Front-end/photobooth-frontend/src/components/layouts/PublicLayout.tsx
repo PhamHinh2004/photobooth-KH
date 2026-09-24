@@ -126,7 +126,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
           ) : (
             <button onClick={() => navigate('/login')} className="hidden lg:block text-primary font-body-md px-3 py-1.5 rounded-full bg-transparent border-0 cursor-pointer">Đăng nhập / Đăng ký</button>
           )}
-          <button onClick={() => navigate(isAuthenticated ? '/' : '/login')} className="bg-primary text-on-primary font-headline-lg-mobile px-4 md:px-5 py-1.5 rounded-full cursor-pointer border border-white/50 shadow-md whitespace-nowrap">CHỤP NGAY</button>
+          <button onClick={() => navigate(isAuthenticated ? '/capture' : '/login')} className="bg-primary text-on-primary font-headline-lg-mobile px-4 md:px-5 py-1.5 rounded-full cursor-pointer border border-white/50 shadow-md whitespace-nowrap">CHỤP NGAY</button>
         </div>
       </nav>
 
