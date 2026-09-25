@@ -20,7 +20,7 @@ const HomePage: React.FC = () => {
     navigate(isAuthenticated ? '/' : '/login')
   }
 
-  const handleStartShooting = () => navigate(isAuthenticated ? '/' : '/login')
+  const handleStartShooting = () => navigate(isAuthenticated ? '/capture' : '/login')
 
   const photos = [
     'https://lh3.googleusercontent.com/aida-public/AB6AXuDwv1jhAhnycjTXdsehFjfc43uj9HbsutmtAvbrmdNxQEqrWCb6X-lYlqiUMR6BPkUUJBxFo2w3JEcekYJNUwHXdGtiv21WZNiMUgqhA38AbAVL4kHOH3XRYwkbKhRGia3sGTYMLmlQMB5YAXNG9UBZxQp8tWnQBOhgOxRaAOmQHTWaETml1yPBxi4zA9ABG0MRTCtJy8mC7w26UAn6TTFDj4_JA79RRoVL_2T8pDPQSMEhX_XaaWAoMg',

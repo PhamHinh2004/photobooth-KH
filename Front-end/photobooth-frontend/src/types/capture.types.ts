@@ -41,6 +41,19 @@ export interface PhotoRecord {
   created_at: string
 }
 
+export interface RecordingRecord {
+  id: string
+  file_url: string | null
+  thumbnail_url: string | null
+  status: string
+}
+
+export interface GifRecord {
+  id: string
+  gif_type: string
+  image_url: string
+}
+
 export type CaptureStep = 
   | 'package-select'
   | 'frame-select'
@@ -71,4 +84,15 @@ export interface FilterPreset {
   saturate: number
   sepia: number
   hueRotate: number
+}
+
+export interface PhotoSticker {
+  id: string
+  src: string
+  label: string
+  x: number
+  y: number
+  size: number
+  rotation: number
+  outlineColor: string
 }
