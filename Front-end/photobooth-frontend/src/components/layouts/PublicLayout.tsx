@@ -80,6 +80,12 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
       onClick: () => navigate('/profile'),
     },
     {
+      key: 'manage-posts',
+      label: 'Quản lý bài viết',
+      icon: <span className="material-symbols-outlined align-middle mr-2 text-[18px]">article</span>,
+      onClick: () => navigate('/my-posts'),
+    },
+    {
       key: 'change-password',
       label: 'Đổi mật khẩu',
       icon: <span className="material-symbols-outlined align-middle mr-2 text-[18px]">lock_reset</span>,
@@ -101,6 +107,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
         <ul className="hidden md:flex gap-5 items-center font-headline-lg text-sm lg:text-base list-none">
           <li onClick={() => isHome ? scrollToSection('hero-section') : navigate('/')} className={`${isHome ? 'text-secondary font-bold border-b-2 border-secondary pb-0.5' : 'text-on-surface-variant font-medium'} cursor-pointer`}>Trang chủ</li>
           <li onClick={() => scrollToSection('features-section')} className="text-on-surface-variant font-medium cursor-pointer">Tính năng</li>
+          <li onClick={() => navigate('/reviews')} className={`${location.pathname.startsWith('/reviews') ? 'text-secondary font-bold border-b-2 border-secondary pb-0.5' : 'text-on-surface-variant font-medium'} cursor-pointer`}>Đánh giá</li>
           <li onClick={() => scrollToSection('how-it-works-section')} className="text-on-surface-variant font-medium cursor-pointer">Hướng dẫn</li>
           <li onClick={() => navigate('/about-us')} className={`${location.pathname === '/about-us' ? 'text-secondary font-bold border-b-2 border-secondary pb-0.5' : 'text-on-surface-variant font-medium'} cursor-pointer`}>Về chúng tôi</li>
         </ul>
