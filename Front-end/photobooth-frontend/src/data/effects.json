@@ -1,0 +1,74 @@
+[
+  {
+    "id": "none",
+    "name": "Mặc định",
+    "icon": "✨",
+    "url": "",
+    "blendMode": "source-over",
+    "defaultOpacity": 1.0,
+    "color": "#f8fafc"
+  },
+  {
+    "id": "plastic",
+    "name": "Bìa Trong",
+    "icon": "🧊",
+    "url": "https://www.transparenttextures.com/patterns/cubes.png",
+    "blendMode": "source-over",
+    "defaultOpacity": 0.4,
+    "color": "#e0f2fe"
+  },
+  {
+    "id": "retro",
+    "name": "Bụi Retro",
+    "icon": "🎞️",
+    "url": "https://www.transparenttextures.com/patterns/dust.png",
+    "blendMode": "source-over",
+    "defaultOpacity": 0.7,
+    "color": "#fef08a"
+  },
+  {
+    "id": "light",
+    "name": "Ánh Sáng",
+    "icon": "☀️",
+    "url": "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=500&auto=format&fit=crop",
+    "blendMode": "screen",
+    "defaultOpacity": 0.4,
+    "color": "#ffedd5"
+  },
+  {
+    "id": "torn",
+    "name": "Giấy Rách",
+    "icon": "📄",
+    "url": "https://images.unsplash.com/photo-1601662528567-526cd06f6582?w=500&auto=format&fit=crop",
+    "blendMode": "multiply",
+    "defaultOpacity": 0.6,
+    "color": "#f3f4f6"
+  },
+  {
+    "id": "stars",
+    "name": "Vệt Sao",
+    "icon": "⭐",
+    "url": "https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?w=500&auto=format&fit=crop",
+    "blendMode": "screen",
+    "defaultOpacity": 0.8,
+    "color": "#c7d2fe"
+  },
+  {
+    "id": "vhs",
+    "name": "Nhiễu VHS",
+    "icon": "📺",
+    "url": "https://www.transparenttextures.com/patterns/stardust.png",
+    "blendMode": "color-dodge",
+    "defaultOpacity": 0.5,
+    "color": "#e2e8f0"
+  },
+  {
+    "id": "bokeh",
+    "name": "Mộng Mơ",
+    "icon": "🫧",
+    "url": "https://images.unsplash.com/photo-1554620121-59e7f3cb55bf?w=500&auto=format&fit=crop",
+    "blendMode": "screen",
+    "defaultOpacity": 0.6,
+    "color": "#fbcfe8"
+  }
+]

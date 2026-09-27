@@ -11,6 +11,9 @@ importers:
       '@ant-design/icons':
         specifier: ^6.3.2
         version: 6.3.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@emoji-mart/data':
+        specifier: ^1.2.1
+        version: 1.2.1
       '@imgly/background-removal':
         specifier: ^1.7.0
         version: 1.7.0(onnxruntime-web@1.21.0)
@@ -23,9 +26,15 @@ importers:
       axios:
         specifier: ^1.19.0
         version: 1.20.0(debug@4.4.3)
+      emoji-mart:
+        specifier: ^5.6.0
+        version: 5.6.0
       gifshot:
         specifier: ^0.4.5
         version: 0.4.5
+      onnxruntime-web:
+        specifier: 1.21.0
+        version: 1.21.0
       react:
         specifier: ^19.2.8
         version: 19.3.0
@@ -117,6 +126,9 @@ packages:
 
   '@babel/runtime@8.0.5':
     resolution: {integrity: sha512-7NK+Lz3spQ52XsUGTxIEVU4jYN2/dIaX8sTxRFAUtYmttYZnVh3aehiihv+/Gb7+duMNHl2OrFcBQRyOHScxpg==}
+
+  '@emoji-mart/data@1.2.1':
+    resolution: {integrity: sha512-no2pQMWiBy6gpBEiqGeU77/bFejDqUTRY7KX+0+iur13op3bqUsXdnwoZs6Xb1zbv0gAj5VvS1PWoUUckSr5Dw==}
 
   '@emotion/hash@0.8.0':
     resolution: {integrity: sha512-kBJtf7PH6aWwZ6fka3zQ0p6SBYzx4fl1LoZXE2RrnYST9Xljm7WfKJrU4g/Xr3Beg72MLrp1AWNUmuYJTL7Cow==}
@@ -849,6 +861,9 @@ packages:
   electron-to-chromium@1.5.427:
     resolution: {integrity: sha512-n14zb3FdsChZ2BNobqNHAJMcP3ifFv4paox2LvCrfVAQcqGiSURgbJl+PfMpHVCNFkStnNc+RRVtPBTVW5PDgw==}
 
+  emoji-mart@5.6.0:
+    resolution: {integrity: sha512-eJp3QRe79pjwa+duv+n7+5YsNhRcMl812EcFVwrnRvYKoNPoQb5qxU8DG6Bgwji0akHdp6D4Ln6tYLG58MFSow==}
+
   es-define-property@1.0.1:
     resolution: {integrity: sha512-e3nRfgfUZ4rNGL232gUgX06QNyyez04KdjFrF+LTRoOXmrOgFKDg4BCdsjW8EnT69eqdYGmRpJwiPVYNrCaW3g==}
     engines: {node: '>= 0.4'}
@@ -1471,6 +1486,8 @@ snapshots:
   '@babel/runtime@7.29.7': {}
 
   '@babel/runtime@8.0.5': {}
+
+  '@emoji-mart/data@1.2.1': {}
 
   '@emotion/hash@0.8.0': {}
 
@@ -2174,6 +2191,8 @@ snapshots:
       gopd: 1.2.0
 
   electron-to-chromium@1.5.427: {}
+
+  emoji-mart@5.6.0: {}
 
   es-define-property@1.0.1: {}
 
