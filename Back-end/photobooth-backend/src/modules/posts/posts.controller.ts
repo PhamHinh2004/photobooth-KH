@@ -40,6 +40,21 @@ export class PostsController {
     return this.postsService.findFeed(+page, +limit);
   }
 
+  // lấy bài viết của chính mình 
+  @ApiOperation({ summary: 'Get current user posts' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @Get('me')
+  findMyPosts(
+    @CurrentUser() user: { id: string },
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    return this.postsService.findUserPosts(user.id, +page, +limit);
+  }
+
   @ApiOperation({ summary: 'Get post by id' })
   @Get(':id')
   findOne(@Param('id') id: string) {

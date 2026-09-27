@@ -13,7 +13,7 @@ export class PostsService {
     @InjectRepository(Post) private readonly postRepository: Repository<Post>,
     @InjectRepository(PostLike) private readonly postLikeRepository: Repository<PostLike>,
     private readonly eventEmitter: EventEmitter2,
-  ) {}
+  ) { }
 
   async create(data: CreatePostDto & { account_id: string }) {
     const post = this.postRepository.create(data);
@@ -64,17 +64,34 @@ export class PostsService {
       limit,
     };
   }
-  
+
+  async findUserPosts(accountId: string, page = 1, limit = 10) {
+    const [data, total] = await this.postRepository.findAndCount({
+      where: { account_id: accountId },
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+      relations: { account: true },
+    });
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
+  }
+
   async findOne(id: string) {
     const post = await this.postRepository.findOne({
       where: { id },
-      relations: { account: true, session: true },
+      relations: { account: true, session: { photo: { frame: true } } },
     });
     if (!post) throw new NotFoundException('Post not found');
-    
+
     // Increment view count
     await this.postRepository.increment({ id }, 'views_count', 1);
-    
+
     return post;
   }
 
