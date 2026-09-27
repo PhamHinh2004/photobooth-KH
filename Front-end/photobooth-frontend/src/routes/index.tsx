@@ -10,6 +10,10 @@ import ProfilePage from '../pages/profile/ProfilePage'
 import ChangePasswordPage from '../pages/profile/ChangePasswordPage'
 import AccountsPage from '../pages/admin/AccountsPage'
 import CapturePage from '../pages/capture/CapturePage'
+import FeedPage from '../pages/social/FeedPage'
+import PostDetailPage from '../pages/social/PostDetailPage'
+import MyPostsPage from '../pages/social/MyPostsPage'
+import PublicLayout from '../components/layouts/PublicLayout'
 
 const routes: RouteObject[] = [
   // Auth routes (không cần đăng nhập)
@@ -73,6 +77,20 @@ const routes: RouteObject[] = [
   {
     path: '/capture',
     element: <CapturePage />,
+  },
+
+  // Social / Reviews
+  {
+    path: '/reviews',
+    element: <PublicLayout><FeedPage /></PublicLayout>,
+  },
+  {
+    path: '/reviews/:id',
+    element: <PublicLayout><PostDetailPage /></PublicLayout>,
+  },
+  {
+    path: '/my-posts',
+    element: <PublicLayout><MyPostsPage /></PublicLayout>,
   },
 
   // Fallback

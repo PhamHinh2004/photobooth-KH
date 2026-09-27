@@ -1,0 +1,212 @@
+{
+  "info": {
+    "name": "Photobooth - Social Realtime Flow",
+    "description": "Collection để test toàn bộ luồng tạo Post, Comment, Like, Update và Delete.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000", "type": "string" },
+    { "key": "token", "value": "YOUR_JWT_TOKEN_HERE", "type": "string" },
+    { "key": "session_id", "value": "b0a6e0c7-1234-4a29-b631-50e39c4a5f6e", "type": "string" },
+    { "key": "post_id", "value": "", "type": "string" },
+    { "key": "comment_id", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Tạo Bài Viết (Create Post)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData.id) {",
+              "    pm.collectionVariables.set(\"post_id\", jsonData.id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
+        },
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": {
+          "raw": "{{base_url}}/posts",
+          "host": [ "{{base_url}}" ],
+          "path": [ "posts" ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": \"{{session_id}}\",\n  \"caption\": \"My first photobooth post!\",\n  \"style_tags\": [\"vintage\", \"funny\"],\n  \"cover_image_url\": \"https://example.com/cover.jpg\"\n}"
+        }
+      }
+    },
+    {
+      "name": "2. Lấy Danh Sách Bài Viết (Get Feed)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/posts?page=1&limit=10",
+          "host": [ "{{base_url}}" ],
+          "path": [ "posts" ],
+          "query": [
+            { "key": "page", "value": "1" },
+            { "key": "limit", "value": "10" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Cập Nhật Bài Viết (Update Post)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
+        },
+        "method": "PATCH",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": {
+          "raw": "{{base_url}}/posts/{{post_id}}",
+          "host": [ "{{base_url}}" ],
+          "path": [ "posts", "{{post_id}}" ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"caption\": \"Updated caption: It was awesome!\"\n}"
+        }
+      }
+    },
+    {
+      "name": "4. Thích Bài Viết (Toggle Like)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
+        },
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/posts/{{post_id}}/like",
+          "host": [ "{{base_url}}" ],
+          "path": [ "posts", "{{post_id}}", "like" ]
+        }
+      }
+    },
+    {
+      "name": "5. Xem Chi Tiết Bài Viết (Get Post Detail)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/posts/{{post_id}}",
+          "host": [ "{{base_url}}" ],
+          "path": [ "posts", "{{post_id}}" ]
+        }
+      }
+    },
+    {
+      "name": "6. Tạo Bình Luận (Create Comment)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData.id) {",
+              "    pm.collectionVariables.set(\"comment_id\", jsonData.id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
+        },
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": {
+          "raw": "{{base_url}}/comments",
+          "host": [ "{{base_url}}" ],
+          "path": [ "comments" ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"post_id\": \"{{post_id}}\",\n  \"content\": \"Great photo!\"\n}"
+        }
+      }
+    },
+    {
+      "name": "7. Lấy Bình Luận Của Bài (Get Comments)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/posts/{{post_id}}/comments",
+          "host": [ "{{base_url}}" ],
+          "path": [ "posts", "{{post_id}}", "comments" ]
+        }
+      }
+    },
+    {
+      "name": "8. Cập Nhật Bình Luận (Update Comment)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
+        },
+        "method": "PATCH",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": {
+          "raw": "{{base_url}}/comments/{{comment_id}}",
+          "host": [ "{{base_url}}" ],
+          "path": [ "comments", "{{comment_id}}" ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"content\": \"Great photo! (edited)\"\n}"
+        }
+      }
+    },
+    {
+      "name": "9. Xóa Bình Luận (Delete Comment)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
+        },
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/comments/{{comment_id}}",
+          "host": [ "{{base_url}}" ],
+          "path": [ "comments", "{{comment_id}}" ]
+        }
+      }
+    },
+    {
+      "name": "10. Xóa Bài Viết (Delete Post)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [ { "key": "token", "value": "{{token}}", "type": "string" } ]
+        },
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/posts/{{post_id}}",
+          "host": [ "{{base_url}}" ],
+          "path": [ "posts", "{{post_id}}" ]
+        }
+      }
+    }
+  ]
+}

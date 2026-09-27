@@ -20,6 +20,17 @@
   --color-bg-dark: #0f0e17;
   --color-bg-card: #1a1a2e;
   --color-accent: #16213e;
+
+  /* Social Feature Tokens */
+  --color-social-primary: #EC4899;
+  --color-social-secondary: #A855F7;
+  --color-social-bg: #FFFFFF;
+  --color-social-bg-soft: #FDF2F8;
+  --color-social-text: #27272A;
+  --color-social-text-muted: #71717A;
+  --color-social-border: #F3E8FF;
+  --color-social-star: #FBBF24;
+  --gradient-social-hero: linear-gradient(135deg, #FDE2F3 0%, #E9D5FF 100%);
 }
 
 /* Y2K Ambient Background */

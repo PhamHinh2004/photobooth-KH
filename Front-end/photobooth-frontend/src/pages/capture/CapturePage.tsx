@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Spin } from 'antd'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Spin, Modal, Input } from 'antd'
 import { useAuthStore } from '@/stores/auth.store'
-import { 
-  getCustomerByAccountId, 
-  savePhoto, 
-  saveRecording, 
-  saveGif, 
-  createSessionResult 
+import {
+  getCustomerByAccountId,
+  savePhoto,
+  saveRecording,
+  saveGif,
+  createSessionResult
 } from '@/api/capture.api'
+import { socialApi } from '@/api/social.api'
 
-import PackageSelector from '@/components/capture/step1/PackageSelector'
+import PackageSelector, { PACKAGE_OPTIONS } from '@/components/capture/step1/PackageSelector'
 import FrameSelector from '@/components/capture/step2/FrameSelector'
 import CameraCapture from '@/components/capture/step3/CameraCapture'
 import ReviewScreen from '@/components/capture/step4/ReviewScreen'
@@ -21,14 +22,28 @@ import stepsData from '@/data/steps.json'
 
 export default function CapturePage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, isAuthenticated } = useAuthStore()
 
-  const [step, setStep] = useState<'package-select' | 'frame-select' | 'capturing' | 'review' | 'filter' | 'result'>('package-select')
-  const [selectedPackage, setSelectedPackage] = useState<PackageOption | null>(null)
-  const [selectedFrame, setSelectedFrame] = useState<Frame | null>(null)
+  const initialFrame = location.state?.initialFrame as Frame | undefined
+
+  const [step, setStep] = useState<'package-select' | 'frame-select' | 'capturing' | 'review' | 'filter' | 'result'>(
+    initialFrame ? 'capturing' : 'package-select'
+  )
   
+  const [selectedPackage, setSelectedPackage] = useState<PackageOption | null>(() => {
+    if (initialFrame) {
+      const slotsCount = initialFrame.layout_config?.slots?.length || 4;
+      const found = PACKAGE_OPTIONS.find(p => p.slotsCount === slotsCount);
+      return found || PACKAGE_OPTIONS[0];
+    }
+    return null;
+  })
+  
+  const [selectedFrame, setSelectedFrame] = useState<Frame | null>(initialFrame || null)
+
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([])
-  
+
   // Media Blobs
   const [recordingBlob, setRecordingBlob] = useState<Blob | null>(null)
   const [gifBlob, setGifBlob] = useState<Blob | null>(null)
@@ -49,6 +64,13 @@ export default function CapturePage() {
   const [customerId, setCustomerId] = useState<string | null>(null)
   const [customerLoading, setCustomerLoading] = useState(false)
   const [customerError, setCustomerError] = useState<string | null>(null)
+
+  // Share States
+  const [createdSessionId, setCreatedSessionId] = useState<string | null>(null)
+  const [isSharing, setIsSharing] = useState(false)
+  const [shareError, setShareError] = useState<string | null>(null)
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const [captionText, setCaptionText] = useState('Vừa chụp bộ ảnh thật cool tại KH BOOTH AI! 😎✨')
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
@@ -115,16 +137,16 @@ export default function CapturePage() {
             }),
             recordingBlob
               ? saveRecording({
-                  accountId: String(user.id),
-                  videoBlob: recordingBlob,
-                })
+                accountId: String(user.id),
+                videoBlob: recordingBlob,
+              })
               : Promise.resolve(null),
             gifBlob
               ? saveGif({
-                  accountId: String(user.id),
-                  gifType: 'standard',
-                  gifBlob: gifBlob,
-                })
+                accountId: String(user.id),
+                gifType: 'standard',
+                gifBlob: gifBlob,
+              })
               : Promise.resolve(null),
           ])
 
@@ -146,7 +168,8 @@ export default function CapturePage() {
             gifId: gifRes ? gifRes.id : undefined,
           }
 
-          await createSessionResult(sessionPayload)
+          const sessionResult = await createSessionResult(sessionPayload)
+          setCreatedSessionId(sessionResult.id)
           setUploadSuccess(true)
         } catch (err: any) {
           console.error('Lỗi khi tải kết quả lên:', err)
@@ -165,18 +188,39 @@ export default function CapturePage() {
 
   // Step labels matching Figma design
   const stepLabels = [
-    { key: 'package-select', label: 'Chọn Frame',        icon: '▣' },
-    { key: 'frame-select',   label: 'Chọn Style Frame',  icon: '✨' },
-    { key: 'capturing',      label: 'Chụp Ảnh',          icon: '📷' },
-    { key: 'review',         label: 'Review Ảnh',        icon: '🔄' },
-    { key: 'filter',         label: 'Hậu Kỳ & Sticker',  icon: '🎨' },
-    { key: 'result',         label: 'Nhận Kết Quả',      icon: '🎁' },
+    { key: 'package-select', label: 'Chọn Frame', icon: '▣' },
+    { key: 'frame-select', label: 'Chọn Style Frame', icon: '✨' },
+    { key: 'capturing', label: 'Chụp Ảnh', icon: '📷' },
+    { key: 'review', label: 'Review Ảnh', icon: '🔄' },
+    { key: 'filter', label: 'Hậu Kỳ & Sticker', icon: '🎨' },
+    { key: 'result', label: 'Nhận Kết Quả', icon: '🎁' },
   ]
 
+  const handleShareToFeed = async () => {
+    if (!createdSessionId || !uploadedResults.photo?.processed_file_url) return
+    setIsSharing(true)
+    setShareError(null)
+    try {
+      const post = await socialApi.createPost({
+        session_id: createdSessionId,
+        cover_image_url: uploadedResults.photo.processed_file_url,
+        caption: captionText,
+        style_tags: ['#khbooth', '#photobooth', '#ai']
+      })
+      setIsShareModalOpen(false)
+      navigate(`/reviews`)
+    } catch (err: any) {
+      console.error('Lỗi khi chia sẻ lên feed:', err)
+      setShareError('Không thể chia sẻ bài viết, vui lòng thử lại sau.')
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
   return (
-    <div 
+    <div
       className="min-h-screen flex flex-col"
-      style={{ 
+      style={{
         fontFamily: "'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif",
         backgroundColor: '#f8f9fa',
         backgroundImage: `
@@ -192,8 +236,8 @@ export default function CapturePage() {
       <nav className="w-full bg-white/70 backdrop-blur-md border-b border-white/60 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           {/* Logo KH BOOTH AI */}
-          <div 
-            onClick={() => navigate('/')} 
+          <div
+            onClick={() => navigate('/')}
             className="flex items-center gap-2 cursor-pointer select-none"
           >
             <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-fuchsia-600 via-purple-600 to-sky-500 bg-clip-text text-transparent">
@@ -215,14 +259,14 @@ export default function CapturePage() {
 
           {/* CTA & Avatar */}
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => setStep('package-select')}
               className="px-4 py-2 rounded-full bg-gradient-to-r from-[#89CFF0] to-[#38bdf8] text-gray-900 font-bold text-xs shadow-sm hover:opacity-95 transition-all flex items-center gap-1.5 cursor-pointer border-0"
             >
               <span>BẮT ĐẦU CHỤP</span>
               <span>✨</span>
             </button>
-            <div 
+            <div
               onClick={() => navigate('/profile')}
               className="w-8 h-8 rounded-full bg-sky-800 text-white flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-90"
               title={user?.name || 'Tài khoản'}
@@ -243,7 +287,7 @@ export default function CapturePage() {
       <div className="w-full px-4 pt-4 pb-2">
         <div className="max-w-4xl mx-auto bg-white/80 backdrop-blur-md rounded-full px-4 sm:px-6 py-2 border border-[#E5E4E2] shadow-sm flex items-center justify-between overflow-x-auto">
           {stepLabels.map((item, idx) => {
-            const isPast    = idx < currentStepIdx
+            const isPast = idx < currentStepIdx
             const isCurrent = idx === currentStepIdx
 
             return (
@@ -256,13 +300,12 @@ export default function CapturePage() {
                     }
                   }}
                   disabled={!isPast && !isCurrent}
-                  className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold transition-all duration-200 whitespace-nowrap rounded-full ${
-                    isCurrent
+                  className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold transition-all duration-200 whitespace-nowrap rounded-full ${isCurrent
                       ? 'bg-[#2d3139] text-white shadow-sm'
                       : isPast
                         ? 'bg-[#489ba5] text-white hover:opacity-90 cursor-pointer shadow-xs'
                         : 'text-gray-400 cursor-default'
-                  }`}
+                    }`}
                 >
                   {isCurrent ? (
                     <>
@@ -319,9 +362,9 @@ export default function CapturePage() {
             {step === 'package-select' && (
               <PackageSelector onSelectPackage={handleSelectPackage} />
             )}
-            
+
             {step === 'frame-select' && (
-              <FrameSelector 
+              <FrameSelector
                 selectedPackage={selectedPackage}
                 onSelect={handleSelectFrame}
                 onBack={() => setStep('package-select')}
@@ -400,20 +443,31 @@ export default function CapturePage() {
                         </a>
                       )}
                     </div>
-                    <button
-                      onClick={() => {
-                        setStep('package-select')
-                        setCapturedPhotos([])
-                        setSelectedPackage(null)
-                        setSelectedFrame(null)
-                        setRecordingBlob(null)
-                        setGifBlob(null)
-                        setUploadedResults({ photo: null, recording: null, gif: null })
-                      }}
-                      className="mt-8 px-8 py-3 rounded-full bg-gradient-to-r from-[#FF00FF] to-[#89CFF0] text-white font-bold shadow-lg hover:scale-105 transition-all cursor-pointer"
-                    >
-                      Chụp Lượt Mới
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-4 mt-8 w-full justify-center">
+                      <button
+                        onClick={() => {
+                          setStep('package-select')
+                          setCapturedPhotos([])
+                          setSelectedPackage(null)
+                          setSelectedFrame(null)
+                          setRecordingBlob(null)
+                          setGifBlob(null)
+                          setUploadedResults({ photo: null, recording: null, gif: null })
+                          setCreatedSessionId(null)
+                          setShareError(null)
+                        }}
+                        className="px-8 py-3 rounded-full border-2 border-[#FF00FF] text-[#FF00FF] font-bold hover:bg-[#FF00FF] hover:text-white transition-all cursor-pointer"
+                      >
+                        Chụp Lượt Mới
+                      </button>
+                      <button
+                        onClick={() => setIsShareModalOpen(true)}
+                        disabled={isSharing || !createdSessionId}
+                        className="px-8 py-3 rounded-full bg-gradient-to-r from-[#FF00FF] to-[#89CFF0] text-white font-bold shadow-lg hover:scale-105 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        🌟 Chia Sẻ Lên Feed
+                      </button>
+                    </div>
                   </>
                 ) : null}
               </div>
@@ -438,6 +492,27 @@ export default function CapturePage() {
           </div>
         </div>
       </footer>
+
+      <Modal
+        title="Chia Sẻ Lên Feed"
+        open={isShareModalOpen}
+        onCancel={() => setIsShareModalOpen(false)}
+        onOk={handleShareToFeed}
+        confirmLoading={isSharing}
+        okText="Gửi"
+        cancelText="Hủy"
+        okButtonProps={{ className: "bg-[#FF00FF] hover:bg-[#D500D5] border-none" }}
+      >
+        <div className="flex flex-col gap-4 mt-4">
+          <Input.TextArea
+            value={captionText}
+            onChange={(e) => setCaptionText(e.target.value)}
+            placeholder="Viết cảm nghĩ của bạn về bức ảnh này..."
+            autoSize={{ minRows: 3, maxRows: 6 }}
+          />
+        </div>
+        {shareError && <p className="text-red-500 mt-2 text-sm">{shareError}</p>}
+      </Modal>
     </div>
   )
 }
