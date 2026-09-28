@@ -35,6 +35,7 @@ export async function savePhoto(params: {
 
   const res = await axiosInstance.post<PhotoRecord>('/photos', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
   })
   return res.data
 }
@@ -49,6 +50,7 @@ export async function saveRecording(params: {
 
   const res = await axiosInstance.post<RecordingRecord>('/recordings', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
   })
   return res.data
 }
@@ -65,6 +67,7 @@ export async function saveGif(params: {
 
   const res = await axiosInstance.post<GifRecord>('/gifs', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
   })
   return res.data
 }

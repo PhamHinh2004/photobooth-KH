@@ -95,4 +95,16 @@ export interface PhotoSticker {
   size: number
   rotation: number
   outlineColor: string
+  outlineWidth: number
 }
+
+export interface PhotoEffect {
+  id: string
+  name: string
+  icon: string
+  url: string
+  blendMode: string
+  defaultOpacity: number
+  color: string
+}
+
