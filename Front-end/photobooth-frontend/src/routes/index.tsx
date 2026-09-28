@@ -4,6 +4,7 @@ import AdminLayout from '../components/layouts/AdminLayout'
 import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
 import ForgotPasswordPage from '../pages/auth/ForgetPasswordPage'
+import OAuthCallbackPage from '../pages/auth/OAuthCallbackPage'
 import HomePage from '../pages/home/HomePage'
 import AboutUsPage from '../pages/about/AboutUsPage'
 import ProfilePage from '../pages/profile/ProfilePage'
@@ -37,6 +38,10 @@ const routes: RouteObject[] = [
         element: <ForgotPasswordPage />,
       },
     ],
+  },
+  {
+    path: '/oauth-callback',
+    element: <OAuthCallbackPage />,
   },
 
   // Admin routes
