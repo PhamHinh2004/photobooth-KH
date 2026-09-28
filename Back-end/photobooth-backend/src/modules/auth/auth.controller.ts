@@ -1,4 +1,7 @@
-import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { Response } from 'express';
+import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -17,7 +20,10 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('register')
   @ApiOperation({ summary: 'Đăng ký tài khoản' })
@@ -111,8 +117,14 @@ export class AuthController {
   @ApiOperation({ summary: 'Lấy thông tin tài khoản hiện tại (Yêu cầu JWT Token)' })
   @ApiResponse({ status: 200, description: 'Thông tin tài khoản hiện tại' })
   @ApiResponse({ status: 401, description: 'Chưa xác thực hoặc Token không hợp lệ' })
-  getMe(@CurrentUser() user: any) {
-    return user;
+  getMe(@CurrentUser() account: any) {
+    return {
+      id: account.id || '',
+      email: account.email || '',
+      name: account.customer?.fullName || account.username || account.email || '',
+      avatarUrl: account.avatarUrl || account.customer?.image || null,
+      role: account.role,
+    };
   }
 
   @Get('accounts')
@@ -124,5 +136,42 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Chưa xác thực hoặc Token không hợp lệ' })
   getAccounts() {
     return this.authService.getAccounts();
+  }
+
+  // ==== GOOGLE ====
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  @ApiOperation({ summary: 'Đăng nhập bằng Google' })
+  async googleAuth() {
+    // Redirect sang Google
+  }
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  @ApiOperation({ summary: 'Callback cho Google OAuth' })
+  async googleAuthCallback(@Req() req: any, @Res() res: Response) {
+    const tokens = await this.authService.validateOAuthLogin(req.user);
+    this.redirectWithTokens(res, tokens);
+  }
+
+  // ==== FACEBOOK ====
+  @Get('facebook')
+  @UseGuards(AuthGuard('facebook'))
+  @ApiOperation({ summary: 'Đăng nhập bằng Facebook' })
+  async facebookAuth() {}
+
+  @Get('facebook/callback')
+  @UseGuards(AuthGuard('facebook'))
+  @ApiOperation({ summary: 'Callback cho Facebook OAuth' })
+  async facebookAuthCallback(@Req() req: any, @Res() res: Response) {
+    const tokens = await this.authService.validateOAuthLogin(req.user);
+    this.redirectWithTokens(res, tokens);
+  }
+
+  private redirectWithTokens(res: Response, tokens: { accessToken: string }) {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+    res.redirect(
+      `${frontendUrl}/oauth-callback?accessToken=${tokens.accessToken}`,
+    );
   }
 }

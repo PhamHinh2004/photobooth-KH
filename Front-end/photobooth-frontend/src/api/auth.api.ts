@@ -64,8 +64,8 @@ export const authApi = {
   /**
    * Lấy thông tin user hiện tại (yêu cầu token)
    */
-  getMe: async (): Promise<ApiResponse<User>> => {
-    const response = await axiosInstance.get<ApiResponse<User>>('/auth/me')
+  getMe: async (): Promise<User> => {
+    const response = await axiosInstance.get<User>('/auth/me')
     return response.data
   },
 

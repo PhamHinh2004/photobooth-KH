@@ -14,7 +14,7 @@ const axiosInstance = axios.create({
 // Request interceptor: gắn Bearer token vào mỗi request
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = useAuthStore.getState().token
+    const token = useAuthStore.getState().token || localStorage.getItem('accessToken')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
