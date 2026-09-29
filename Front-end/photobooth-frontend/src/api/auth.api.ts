@@ -74,7 +74,7 @@ export const authApi = {
     return response.data
   },
 
-  updateMyProfile: async (data: Partial<Pick<CustomerProfile, 'fullName' | 'birthday' | 'city' | 'gender' | 'image'>>): Promise<CustomerProfile> => {
+  updateMyProfile: async (data: Partial<Pick<CustomerProfile, 'fullName' | 'birthday' | 'city' | 'gender' | 'image'>> | FormData): Promise<CustomerProfile> => {
     const response = await axiosInstance.patch<CustomerProfile>('/customers/me/profile', data)
     return response.data
   },

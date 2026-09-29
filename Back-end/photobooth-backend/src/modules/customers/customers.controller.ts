@@ -9,7 +9,10 @@ import {
   Post,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
@@ -32,11 +35,13 @@ export class CustomersController {
 
   @Patch('me/profile')
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('image'))
   updateMyProfile(
     @CurrentUser() account: { id?: string },
     @Body() dto: UpdateCustomerDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.customersService.updateByAccountId(account.id || '', dto);
+    return this.customersService.updateByAccountId(account.id || '', dto, file);
   }
 
   @Get('me/photo-history')
@@ -89,11 +94,13 @@ export class CustomersController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Cập nhật thông tin hồ sơ khách hàng' })
+  @UseInterceptors(FileInterceptor('image'))
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateCustomerDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.customersService.update(id, dto);
+    return this.customersService.update(id, dto, file);
   }
 
   @Delete(':id')

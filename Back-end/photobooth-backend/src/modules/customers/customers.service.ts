@@ -13,6 +13,7 @@ import { Customer } from './entities/customer.entity';
 import { PhotoSession } from './entities/photo-session.entity';
 import { CreatePhotoSessionDto } from './dto/create-photo-session.dto';
 import { GetCustomersQueryDto } from './dto/get-customers-query.dto';
+import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class CustomersService {
@@ -23,6 +24,7 @@ export class CustomersService {
     private readonly accountRepository: Repository<Account>,
     @InjectRepository(PhotoSession)
     private readonly photoSessionRepository: Repository<PhotoSession>,
+    private readonly storageService: StorageService,
   ) {}
 
   /**
@@ -180,22 +182,56 @@ export class CustomersService {
     return { message: 'Tạo hồ sơ khách hàng thành công' };
   }
 
-  async update(id: string, dto: UpdateCustomerDto): Promise<Customer> {
+  async update(id: string, dto: UpdateCustomerDto, file?: Express.Multer.File): Promise<Customer> {
     const customer = await this.findOne(id);
 
     if (dto.fullName !== undefined) customer.fullName = dto.fullName;
     if (dto.birthday !== undefined) customer.birthday = dto.birthday;
     if (dto.city !== undefined) customer.city = dto.city;
     if (dto.gender !== undefined) customer.gender = dto.gender;
-    if (dto.image !== undefined) customer.image = dto.image;
+
+    // Set is_created to true when updating profile
+    customer.iscreated = true;
+
+    if (file) {
+      const filenameParts = file.originalname.split('.');
+      const ext = filenameParts.length > 1 ? filenameParts.pop()! : 'jpg';
+      const publicUrl = await this.storageService.uploadFile('profile', file.buffer, ext);
+      
+      // Optionally delete old image if it's not a default one
+      if (
+        customer.image &&
+        !customer.image.includes('woman_profile.jpg') &&
+        !customer.image.includes('man_profile.jpg')
+      ) {
+        await this.storageService.deleteFile(customer.image).catch(() => {});
+      }
+      
+      customer.image = publicUrl;
+    } else if (dto.image !== undefined) {
+      customer.image = dto.image;
+    }
+
+    // Apply default image based on gender if image is empty or still using a default one
+    if (
+      !customer.image || 
+      customer.image.includes('woman_profile.jpg') || 
+      customer.image.includes('man_profile.jpg')
+    ) {
+      if (customer.gender === 'female' as any) {
+        customer.image = 'https://pub-4eb303709ef24609a3b420990203812a.r2.dev/profile/woman_profile.jpg';
+      } else {
+        customer.image = 'https://pub-4eb303709ef24609a3b420990203812a.r2.dev/profile/man_profile.jpg';
+      }
+    }
 
     await this.customerRepository.save(customer);
     return this.findOne(id);
   }
 
-  async updateByAccountId(accountId: string, dto: UpdateCustomerDto): Promise<Customer> {
+  async updateByAccountId(accountId: string, dto: UpdateCustomerDto, file?: Express.Multer.File): Promise<Customer> {
     const customer = await this.findByAccountId(accountId);
-    return this.update(customer.id || '', dto);
+    return this.update(customer.id || '', dto, file);
   }
 
   async getPhotoHistory(accountId: string, type?: 'solo' | 'group', order: 'newest' | 'oldest' = 'newest') {

@@ -90,7 +90,7 @@ const RegisterPage: React.FC = () => {
       const response = await authApi.verifyRegistrationOtp({ email: email.trim().toLowerCase(), otp })
       setAuth(response.user, response.accessToken)
       message.success('Xác thực email và đăng ký thành công!')
-      navigate('/', { replace: true })
+      navigate('/setup-profile', { replace: true })
     } catch (error: unknown) {
       const apiMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message
       setErrorMsg(apiMessage || 'OTP không hợp lệ hoặc đã hết hạn.')
