@@ -7,8 +7,10 @@ import { CustomersService } from './customers.service';
 import { Customer } from './entities/customer.entity';
 import { PhotoSession } from './entities/photo-session.entity';
 
+import { StorageModule } from '../storage/storage.module';
+
 @Module({
-  imports: [TypeOrmModule.forFeature([Customer, Account, PhotoSession])],
+  imports: [TypeOrmModule.forFeature([Customer, Account, PhotoSession]), StorageModule],
   controllers: [CustomersController, AdminCustomersController],
   providers: [CustomersService],
   exports: [CustomersService, TypeOrmModule],

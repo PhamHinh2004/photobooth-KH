@@ -5,6 +5,7 @@ import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
 import ForgotPasswordPage from '../pages/auth/ForgetPasswordPage'
 import OAuthCallbackPage from '../pages/auth/OAuthCallbackPage'
+import SetupProfilePage from '../pages/auth/SetupProfilePage'
 import HomePage from '../pages/home/HomePage'
 import AboutUsPage from '../pages/about/AboutUsPage'
 import ProfilePage from '../pages/profile/ProfilePage'
@@ -36,6 +37,10 @@ const routes: RouteObject[] = [
       {
         path: '/forgetpassword',
         element: <ForgotPasswordPage />,
+      },
+      {
+        path: '/setup-profile',
+        element: <SetupProfilePage />,
       },
     ],
   },
