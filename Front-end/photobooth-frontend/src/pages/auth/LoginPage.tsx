@@ -46,20 +46,6 @@ const LoginPage: React.FC = () => {
     }
   }
 
-  const handleSocialLogin = (provider: 'Google' | 'Facebook') => {
-    message.loading({ content: `Đang kết nối tới ${provider}...`, key: 'social' })
-    setTimeout(() => {
-      // Giả lập Đăng nhập Social
-      const dummyUser = {
-        id: '1',
-        email: provider === 'Google' ? 'user.google@gmail.com' : 'user.facebook@fb.com',
-        name: provider === 'Google' ? 'Google User' : 'Facebook User',
-      }
-      setAuth(dummyUser, 'social_access_token_demo')
-      message.success({ content: `Đăng nhập bằng ${provider} thành công!`, key: 'social' })
-      navigate('/')
-    }, 1200)
-  }
 
   return (
     <div className="bg-surface/60 backdrop-blur-2xl rounded-xl p-6 md:p-8 chrome-border relative overflow-hidden shadow-2xl">
@@ -169,10 +155,9 @@ const LoginPage: React.FC = () => {
         {/* Social Login Buttons (Google & Facebook) */}
         <div className="grid grid-cols-2 gap-3">
           {/* Google (Gmail) Button */}
-          <button
-            type="button"
-            onClick={() => handleSocialLogin('Google')}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white/80 hover:bg-white border border-outline-variant/60 shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer font-medium text-xs text-on-surface"
+          <a
+            href={`${import.meta.env.VITE_API_BASE_URL}/auth/google`}
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white/80 hover:bg-white border border-outline-variant/60 shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer font-medium text-xs text-on-surface no-underline"
           >
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path
@@ -193,19 +178,18 @@ const LoginPage: React.FC = () => {
               />
             </svg>
             <span>Google</span>
-          </button>
+          </a>
 
           {/* Facebook Button */}
-          <button
-            type="button"
-            onClick={() => handleSocialLogin('Facebook')}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] text-white shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer font-medium text-xs"
+          <a
+            href={`${import.meta.env.VITE_API_BASE_URL}/auth/facebook`}
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] text-white shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer font-medium text-xs no-underline"
           >
             <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
               <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
             </svg>
             <span>Facebook</span>
-          </button>
+          </a>
         </div>
 
         {/* Redirect link */}

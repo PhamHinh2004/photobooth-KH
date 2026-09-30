@@ -64,8 +64,8 @@ export const authApi = {
   /**
    * Lấy thông tin user hiện tại (yêu cầu token)
    */
-  getMe: async (): Promise<ApiResponse<User>> => {
-    const response = await axiosInstance.get<ApiResponse<User>>('/auth/me')
+  getMe: async (): Promise<User> => {
+    const response = await axiosInstance.get<User>('/auth/me')
     return response.data
   },
 
@@ -74,7 +74,7 @@ export const authApi = {
     return response.data
   },
 
-  updateMyProfile: async (data: Partial<Pick<CustomerProfile, 'fullName' | 'birthday' | 'city' | 'gender' | 'image'>>): Promise<CustomerProfile> => {
+  updateMyProfile: async (data: Partial<Pick<CustomerProfile, 'fullName' | 'birthday' | 'city' | 'gender' | 'image'>> | FormData): Promise<CustomerProfile> => {
     const response = await axiosInstance.patch<CustomerProfile>('/customers/me/profile', data)
     return response.data
   },

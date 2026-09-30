@@ -25,6 +25,15 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyRegistrationOtpDto } from './dto/verify-registration-otp.dto';
 import { RegistrationOtp } from './entities/registration-otp.entity';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { AuthProvider } from '../../common/enums/auth-provider.enum';
+
+export interface OAuthUserPayload {
+  providerId: string;
+  email: string;
+  fullName: string;
+  avatarUrl?: string;
+  provider: 'google' | 'facebook';
+}
 
 @Injectable()
 export class AuthService {
@@ -298,6 +307,10 @@ export class AuthService {
       throw new UnauthorizedException('Email/Username hoặc mật khẩu không chính xác');
     }
 
+    if (!account.password) {
+      throw new UnauthorizedException('Tài khoản này được đăng nhập bằng mạng xã hội');
+    }
+
     const isMatch = await bcrypt.compare(dto.password, account.password as string);
     if (!isMatch) {
       throw new UnauthorizedException('Email/Username hoặc mật khẩu không chính xác');
@@ -346,11 +359,15 @@ export class AuthService {
 
     const account = await this.accountRepository.findOne({
       where: { id: accountId },
-      select: { id: true, password: true },
+      select: { id: true, password: true, authProvider: true },
     });
 
-    if (!account || !account.password) {
+    if (!account) {
       throw new UnauthorizedException('Không tìm thấy tài khoản');
+    }
+
+    if (account.authProvider !== AuthProvider.LOCAL || !account.password) {
+      throw new BadRequestException('Tài khoản đăng nhập qua mạng xã hội không thể đổi mật khẩu');
     }
 
     const isCurrentPasswordValid = await bcrypt.compare(currentPassword, account.password);
@@ -368,5 +385,56 @@ export class AuthService {
     await this.accountRepository.save(account);
 
     return { message: 'Đổi mật khẩu thành công' };
+  }
+
+  async validateOAuthLogin(payload: OAuthUserPayload): Promise<{ accessToken: string, user: any }> {
+    let account = await this.accountRepository.findOne({
+      where: { email: payload.email },
+      relations: { customer: true },
+    });
+
+    if (!account) {
+      const username = payload.email.split('@')[0].slice(0, 140);
+      account = await this.accountRepository.save(
+        this.accountRepository.create({
+          email: payload.email,
+          username,
+          authProvider: payload.provider as AuthProvider,
+          providerId: payload.providerId,
+          avatarUrl: payload.avatarUrl,
+          password: undefined, // No password for OAuth
+          role: Role.CUSTOMER,
+          isActive: true,
+          customer: { fullName: payload.fullName },
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+      );
+    } else if (account.authProvider === AuthProvider.LOCAL) {
+      account.authProvider = payload.provider as AuthProvider;
+      account.providerId = payload.providerId;
+      if (!account.avatarUrl && payload.avatarUrl) {
+        account.avatarUrl = payload.avatarUrl;
+      }
+      await this.accountRepository.save(account);
+    }
+
+    const jwtPayload = {
+      sub: account.id || '',
+      email: account.email || '',
+      role: account.role || '',
+    };
+    const accessToken = this.jwtService.sign(jwtPayload as any);
+
+    return {
+      accessToken,
+      user: {
+        id: account.id || '',
+        email: account.email || '',
+        name: account.customer?.fullName || account.username || account.email || '',
+        avatarUrl: account.avatarUrl || account.customer?.image || null,
+        role: account.role,
+      },
+    };
   }
 }

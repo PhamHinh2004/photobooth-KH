@@ -25,6 +25,8 @@ const ProfilePage = () => {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [form, setForm] = useState({ fullName: '', birthday: '', city: '', gender: 'others' as CustomerProfile['gender'], image: '' })
 
   useEffect(() => {
@@ -62,7 +64,7 @@ const ProfilePage = () => {
   const totalPhotos = history.length
   const soloPhotos = history.filter((photo) => photo.sessionType === 'solo').length
   const groupPhotos = history.filter((photo) => photo.sessionType === 'group').length
-  const displayImage = form.image || profile?.image
+  const displayImage = previewImage || form.image || profile?.image
   const initials = useMemo(() => (profile?.fullName || 'KH').split(' ').map((part) => part[0]).slice(-2).join('').toUpperCase(), [profile?.fullName])
 
   const updateField = (field: keyof typeof form, value: string) => setForm((current) => ({ ...current, [field]: value }))
@@ -77,9 +79,8 @@ const ProfilePage = () => {
       message.warning('Ảnh đại diện không được lớn hơn 2MB.')
       return
     }
-    const reader = new FileReader()
-    reader.onload = () => updateField('image', String(reader.result))
-    reader.readAsDataURL(file)
+    setAvatarFile(file)
+    setPreviewImage(URL.createObjectURL(file))
   }
 
   const saveProfile = async () => {
@@ -89,11 +90,19 @@ const ProfilePage = () => {
     }
     setSaving(true)
     try {
-      const updated = await authApi.updateMyProfile({ ...form, fullName: form.fullName.trim() })
+      const formData = new FormData()
+      formData.append('fullName', form.fullName.trim())
+      if (form.birthday) formData.append('birthday', form.birthday)
+      if (form.city) formData.append('city', form.city)
+      if (form.gender) formData.append('gender', form.gender)
+      if (avatarFile) formData.append('image', avatarFile)
+
+      const updated = await authApi.updateMyProfile(formData)
       setProfile(updated)
       const currentUser = useAuthStore.getState().user
       if (currentUser) setAuthUser({ ...currentUser, name: updated.fullName || currentUser.name, avatarUrl: updated.image })
       setEditing(false)
+      setPreviewImage(null)
       message.success('Đã cập nhật hồ sơ.')
     } catch {
       message.error('Cập nhật hồ sơ thất bại.')
