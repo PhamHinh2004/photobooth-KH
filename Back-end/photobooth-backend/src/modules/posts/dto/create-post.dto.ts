@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsArray, IsUrl, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsUrl, IsUUID, IsNumber, Min, Max } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreatePostDto {
@@ -20,4 +20,11 @@ export class CreatePostDto {
   @ApiProperty()
   @IsUrl()
   cover_image_url: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  rating?: number;
 }

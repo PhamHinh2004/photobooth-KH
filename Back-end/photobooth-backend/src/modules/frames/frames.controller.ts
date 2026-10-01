@@ -26,6 +26,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { StorageService } from '../storage/storage.service';
 import { CreateFrameDto } from './dto/create-frame.dto';
+import { GetFramesQueryDto } from './dto/get-frames-query.dto';
 import { SessionTypeSupported } from './entities/frame.entity';
 import { FramesService } from './frames.service';
 
@@ -122,8 +123,8 @@ export class FramesController {
 
   @Get()
   @ApiOperation({ summary: 'Danh sách frame (public — dùng khi khách chọn frame)' })
-  findAll(@Query('name') name?: string) {
-    return this.framesService.findAll(name);
+  findAll(@Query() query: GetFramesQueryDto) {
+    return this.framesService.findAll(query);
   }
 
   @Get('aspect-ratio/:aspectRatio')

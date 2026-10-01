@@ -24,6 +24,8 @@ export interface Frame {
   is_active: boolean
   category?: string
   tags?: string[]
+  rating?: number
+  rating_count?: number
 }
 
 export interface PhotoRecord {

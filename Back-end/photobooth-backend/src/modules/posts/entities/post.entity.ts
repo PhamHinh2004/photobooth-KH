@@ -1,6 +1,6 @@
 import {
   Entity, Column, PrimaryGeneratedColumn, ManyToOne,
-  CreateDateColumn, JoinColumn,
+  CreateDateColumn, JoinColumn, Check
 } from 'typeorm';
 import { Account } from '../../accounts/entities/account.entity';
 import { SessionResult } from '../../session-results/entities/session-result.entity';
@@ -11,6 +11,7 @@ export enum PostStatus {
 }
 
 @Entity('posts')
+@Check(`"rating" IS NULL OR ("rating" >= 1 AND "rating" <= 5)`)
 export class Post {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -34,6 +35,9 @@ export class Post {
 
   @Column({ type: 'jsonb', nullable: true })
   style_tags: string[] | null;
+
+  @Column({ type: 'double precision', nullable: true })
+  rating: number | null;
 
   @Column()
   cover_image_url: string;
