@@ -1,5 +1,5 @@
 import axiosInstance from './axios'
-import type { ApiResponse, AuthResponse, CustomerProfile, LoginRequest, PhotoSession, RegisterRequest, User } from '@/types/auth.types'
+import type { AuthResponse, CustomerProfile, LoginRequest, PhotoSession, RegisterRequest, User } from '@/types/auth.types'
 
 export const authApi = {
   /**

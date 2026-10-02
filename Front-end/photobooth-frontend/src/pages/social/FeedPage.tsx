@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { HeroSection } from '../../components/social/HeroSection';
 import { FilterTabs } from '../../components/social/FilterTabs';
 import { PostCard } from '../../components/social/PostCard';
@@ -39,8 +39,16 @@ export default function FeedPage() {
   return (
     <div className="min-h-screen pb-16">
       <HeroSection stats={stats} />
-      
+
       <div className="max-w-6xl mx-auto px-4 mt-8">
+        <div className="flex items-center justify-end mb-4">
+          <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] ${isConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-200 text-zinc-600'}`}>
+            {isConnected ? 'Live' : 'Offline'}
+          </span>
+        </div>
+
+        <FilterTabs active={activeTab} onChange={setActiveTab} />
+
         {loading ? (
           <div className="flex justify-center py-20">
             <Spin size="large" />

@@ -5,7 +5,9 @@ export interface CommentNode {
   content: string;
   likes_count: number;
   created_at: string;
+  account_id?: string;
   account?: {
+    id?: string;
     username?: string;
     full_name?: string;
     avatarUrl?: string | null;

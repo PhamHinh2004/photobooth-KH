@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Table, Button, Space, Popconfirm, message, Tag } from 'antd';
 import { socialApi } from '../../api/social.api';
 import { useNavigate } from 'react-router-dom';

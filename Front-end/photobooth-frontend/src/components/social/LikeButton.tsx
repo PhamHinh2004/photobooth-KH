@@ -3,20 +3,49 @@ import { socialApi } from '../../api/social.api';
 import { useAuthStore } from '../../stores/auth.store';
 import { message } from 'antd';
 
-export function LikeButton({ postId, initialCount }: { postId: string; initialCount: number }) {
+function getLikedPosts(storageKey: string): string[] {
+  try {
+    const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    return Array.isArray(stored) ? stored.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLikedPosts(storageKey: string, postIds: string[]) {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(postIds));
+  } catch {
+    // The server response remains authoritative if local storage is unavailable.
+  }
+}
+
+export function LikeButton({
+  postId,
+  initialCount,
+  className = '',
+}: {
+  postId: string;
+  initialCount: number;
+  className?: string;
+}) {
   const [count, setCount] = useState(initialCount);
   const [pending, setPending] = useState(false);
   const isAuthenticated = useAuthStore((state) => !!state.token);
+  const accountId = useAuthStore((state) => state.user?.id);
+  const storageKey = `likedPosts:${accountId ?? 'anonymous'}`;
 
-  // Initialize liked state from localStorage
   const [liked, setLiked] = useState(() => {
-    const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]');
-    return likedPosts.includes(postId);
+    return getLikedPosts(storageKey).includes(postId);
   });
 
   useEffect(() => {
     setCount(initialCount);
   }, [initialCount]);
+
+  useEffect(() => {
+    setLiked(getLikedPosts(storageKey).includes(postId));
+  }, [postId, storageKey]);
 
   async function handleClick(e: React.MouseEvent) {
     e.preventDefault(); // Prevent navigating if wrapped in a link
@@ -30,32 +59,25 @@ export function LikeButton({ postId, initialCount }: { postId: string; initialCo
 
     // Optimistic update
     setPending(true);
+    const previousLiked = liked;
+    const previousCount = count;
     const newLiked = !liked;
     setLiked(newLiked);
-    setCount((c) => newLiked ? c + 1 : c - 1);
+    setCount(Math.max(0, previousCount + (newLiked ? 1 : -1)));
 
-    // Update local storage
-    const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]');
-    if (newLiked) {
-      localStorage.setItem('likedPosts', JSON.stringify([...likedPosts, postId]));
-    } else {
-      localStorage.setItem('likedPosts', JSON.stringify(likedPosts.filter((id: string) => id !== postId)));
-    }
+    const previousLikedPosts = getLikedPosts(storageKey);
+    const nextLikedPosts = newLiked
+      ? [...new Set([...previousLikedPosts, postId])]
+      : previousLikedPosts.filter((id) => id !== postId);
+    saveLikedPosts(storageKey, nextLikedPosts);
 
     try {
-      await socialApi.toggleLike(postId);
-    } catch (err) {
-      // Revert on error
-      setLiked(liked);
-      setCount((c) => liked ? c + 1 : c - 1);
-      
-      // Revert local storage
-      if (liked) {
-        localStorage.setItem('likedPosts', JSON.stringify([...likedPosts, postId]));
-      } else {
-        localStorage.setItem('likedPosts', JSON.stringify(likedPosts.filter((id: string) => id !== postId)));
-      }
-      
+      const updatedPost = await socialApi.toggleLike(postId);
+      if (typeof updatedPost?.likes_count === 'number') setCount(updatedPost.likes_count);
+    } catch {
+      setLiked(previousLiked);
+      setCount(previousCount);
+      saveLikedPosts(storageKey, previousLikedPosts);
       message.error('Có lỗi xảy ra.');
     } finally {
       setPending(false);
@@ -63,7 +85,7 @@ export function LikeButton({ postId, initialCount }: { postId: string; initialCo
   }
 
   return (
-    <button onClick={handleClick} disabled={pending} className="flex items-center gap-1 hover:scale-110 transition-transform disabled:cursor-wait">
+    <button onClick={handleClick} disabled={pending} className={`flex items-center gap-1 hover:scale-110 transition-transform disabled:cursor-wait ${className}`}>
       <span className={liked ? 'text-pink-500' : 'grayscale'}>❤️</span> 
       <span className="font-medium">{count}</span>
     </button>

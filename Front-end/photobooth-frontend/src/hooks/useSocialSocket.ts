@@ -65,7 +65,9 @@ export const useSocialSocket = (token?: string) => {
       socket.on('comment:updated', (updatedComment) => {
         setComments((prev) => prev.map((c) => (c.id === updatedComment.id ? updatedComment : c)));
       });
-      socket.on('comment:deleted', (commentId) => {
+      socket.on('comment:deleted', (payload: string | { id?: string }) => {
+        const commentId = typeof payload === 'string' ? payload : payload.id;
+        if (!commentId) return;
         setComments((prev) => prev.filter((c) => c.id !== commentId));
       });
     }

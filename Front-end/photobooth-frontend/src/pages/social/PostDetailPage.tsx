@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { socialApi } from '../../api/social.api';
 import { PostDetailLayout } from '../../components/social/PostDetailLayout';
@@ -9,6 +9,13 @@ export default function PostDetailPage() {
   const navigate = useNavigate();
   const [post, setPost] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleCommentDeleted = () => {
+    setPost((current: any) => current && ({
+      ...current,
+      comments_count: Math.max(0, (current.comments_count ?? 0) - 1),
+    }));
+  };
 
   useEffect(() => {
     async function loadPost() {
@@ -55,7 +62,7 @@ export default function PostDetailPage() {
           ← Quay lại Cộng đồng Đánh giá
         </button>
       </div>
-      <PostDetailLayout post={post} />
+      <PostDetailLayout post={post} onCommentDeleted={handleCommentDeleted} />
     </div>
   );
 }

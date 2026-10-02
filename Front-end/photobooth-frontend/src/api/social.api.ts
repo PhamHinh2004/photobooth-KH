@@ -63,8 +63,8 @@ export async function attachCustomerProfiles<T extends SocialItem>(items: T[]): 
 
 export const socialApi = {
   getFeed: async (page = 1, limit = 10, filter = 'all') => {
-    // In real app, append filter if API supports it
-    const { data } = await axiosInstance.get(`/posts?page=${page}&limit=${limit}`);
+    const query = filter && filter !== 'all' ? `&filter=${encodeURIComponent(filter)}` : '';
+    const { data } = await axiosInstance.get(`/posts?page=${page}&limit=${limit}${query}`);
     return { ...data, data: await attachCustomerProfiles(data.data || []) };
   },
   getPost: async (id: string) => {
@@ -87,6 +87,10 @@ export const socialApi = {
   },
   createComment: async (payload: { post_id: string; content: string; parent_comment_id?: string }) => {
     const { data } = await axiosInstance.post('/comments', payload);
+    return data;
+  },
+  deleteComment: async (commentId: string) => {
+    const { data } = await axiosInstance.delete(`/comments/${commentId}`);
     return data;
   },
   createPost: async (payload: { session_id: string; caption?: string; cover_image_url: string; style_tags?: string[]; rating?: number }) => {

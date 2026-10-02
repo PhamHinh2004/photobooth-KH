@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { message, Popconfirm } from 'antd';
 import { CommentInput } from './CommentInput';
 import type { CommentNode } from './commentTree';
-import { Heart, MessageSquare, ChevronDown, ChevronUp, MoreHorizontal } from 'lucide-react';
+import { Heart, MessageSquare, ChevronDown, ChevronUp, MoreHorizontal, Trash2 } from 'lucide-react';
+import { socialApi } from '../../api/social.api';
+import { useAuthStore } from '../../stores/auth.store';
 
 export type { CommentNode } from './commentTree';
 
@@ -53,10 +56,12 @@ export function CommentThread({
   comment,
   depth = 0,
   onReplySuccess,
+  onDelete,
 }: {
   comment: CommentNode;
   depth?: number;
   onReplySuccess?: () => void;
+  onDelete?: (commentId: string) => void;
 }) {
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [expanded, setExpanded] = useState(depth < 1);
@@ -65,6 +70,9 @@ export function CommentThread({
   const [showReactions, setShowReactions] = useState(false);
   const [reaction, setReaction] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(false);
+  const currentAccountId = useAuthStore((state) => state.user?.id);
+  const commentAccountId = comment.account_id ?? comment.account?.id;
+  const isOwner = currentAccountId != null && String(commentAccountId) === String(currentAccountId);
 
   const fullName =
     comment.account?.customer?.fullName ||
@@ -104,6 +112,17 @@ export function CommentThread({
       setLikeCount((c) => c + 1);
     }
     setShowReactions(false);
+  };
+
+  const handleDelete = async () => {
+    try {
+      await socialApi.deleteComment(comment.id);
+      onDelete?.(comment.id);
+      setShowOptions(false);
+      message.success('Đã xóa bình luận.');
+    } catch {
+      message.error('Xóa bình luận thất bại.');
+    }
   };
 
   return (
@@ -211,6 +230,23 @@ export function CommentThread({
                   <button className="w-full text-left px-3 py-2 text-[12px] text-zinc-600 hover:bg-zinc-50 font-medium">
                     🚩 Báo cáo
                   </button>
+                  {isOwner && (
+                    <Popconfirm
+                      title="Xóa bình luận này?"
+                      description="Bình luận sẽ bị xóa khỏi bài viết."
+                      okText="Xóa"
+                      cancelText="Hủy"
+                      okButtonProps={{ danger: true }}
+                      onConfirm={handleDelete}
+                    >
+                      <button
+                        type="button"
+                        className="w-full flex items-center gap-2 text-left px-3 py-2 text-[12px] text-red-600 hover:bg-red-50 font-medium"
+                      >
+                        <Trash2 size={13} /> Xóa bình luận
+                      </button>
+                    </Popconfirm>
+                  )}
                 </div>
               )}
             </div>
@@ -248,6 +284,7 @@ export function CommentThread({
                   comment={reply}
                   depth={depth + 1}
                   onReplySuccess={onReplySuccess}
+                  onDelete={onDelete}
                 />
               ))}
               {depth === 0 && (

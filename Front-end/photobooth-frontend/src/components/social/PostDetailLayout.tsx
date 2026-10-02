@@ -1,11 +1,11 @@
-import React from 'react';
 import { DiscussionSection } from './DiscussionSection';
 import { LikeButton } from './LikeButton';
 import { useNavigate } from 'react-router-dom';
-import { Download, Bookmark, Share2, Maximize2, Users, ArrowLeft, Star, Heart, CheckCircle2, MessageCircle } from 'lucide-react';
+import { Download, Bookmark, Share2, Maximize2, Users, ArrowLeft, MessageCircle } from 'lucide-react';
 
 interface PostDetailLayoutProps {
   post: any;
+  onCommentDeleted?: () => void;
 }
 
 const formatRelativeTime = (dateString: string) => {
@@ -27,7 +27,7 @@ const formatRelativeTime = (dateString: string) => {
   return `${diffDays} ngày trước`;
 };
 
-export function PostDetailLayout({ post }: PostDetailLayoutProps) {
+export function PostDetailLayout({ post, onCommentDeleted }: PostDetailLayoutProps) {
   const navigate = useNavigate();
   const frame = post.session?.photo?.frame;
   const frameWidth = Number(frame?.width);
@@ -182,9 +182,11 @@ export function PostDetailLayout({ post }: PostDetailLayoutProps) {
           <div className="flex items-center gap-4 text-[13px]">
             <span className="text-zinc-400 font-medium">Tương tác:</span>
             <div className="flex gap-2">
-              <button className="flex items-center gap-1.5 font-bold text-zinc-600 bg-red-50/50 border border-red-100 px-3 py-1.5 rounded-full hover:bg-red-50">
-                <span className="text-red-500">❤️</span> {post.likes_count ?? 0}
-              </button>
+              <LikeButton
+                postId={post.id}
+                initialCount={post.likes_count ?? 0}
+                className="gap-1.5 font-bold text-zinc-600 bg-red-50/50 border border-red-100 px-3 py-1.5 rounded-full hover:bg-red-50"
+              />
               <button className="flex items-center gap-1.5 font-bold text-zinc-600 bg-zinc-50 border border-zinc-200 px-3 py-1.5 rounded-full hover:bg-zinc-100">
                 <span>💬</span> {post.comments_count ?? 0}
               </button>
@@ -207,7 +209,7 @@ export function PostDetailLayout({ post }: PostDetailLayoutProps) {
             </div>
           </div>
           
-          <DiscussionSection postId={post.id} />
+          <DiscussionSection postId={post.id} onCommentDeleted={onCommentDeleted} />
         </div>
       </div>
     </div>
