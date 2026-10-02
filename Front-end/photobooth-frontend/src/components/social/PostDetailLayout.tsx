@@ -11,14 +11,38 @@ interface PostDetailLayoutProps {
 const formatRelativeTime = (dateString: string) => {
   if (!dateString) return '';
   const date = new Date(dateString);
-  return date.toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const now = new Date();
+  const dateJustDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const nowJustDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffTime = now.getTime() - date.getTime();
+  const diffDays = Math.round((nowJustDay.getTime() - dateJustDay.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) {
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    if (diffMinutes < 1) return 'mới';
+    if (diffMinutes < 60) return `${diffMinutes} phút trước`;
+    const diffHours = Math.floor(diffMinutes / 60);
+    return `${diffHours} giờ trước`;
+  }
+  return `${diffDays} ngày trước`;
 };
 
 export function PostDetailLayout({ post }: PostDetailLayoutProps) {
   const navigate = useNavigate();
+  const frame = post.session?.photo?.frame;
+  const frameWidth = Number(frame?.width);
+  const frameHeight = Number(frame?.height);
+  const frameScale = frameWidth > 0 && frameHeight > 0 ? Math.min(48 / frameWidth, 68 / frameHeight) : 1;
+  const framePreviewStyle = frameWidth > 0 && frameHeight > 0
+    ? { width: `${Math.max(10, frameWidth * frameScale)}px`, height: `${Math.max(12, frameHeight * frameScale)}px` }
+    : { width: '34px', height: '56px' };
 
   const handleApplyFrame = () => {
-    navigate('/capture');
+    if (frame?.id) {
+      navigate('/capture', { state: { initialFrameId: frame.id, initialFrame: frame } });
+    } else {
+      navigate('/capture');
+    }
   };
 
   const copyLink = () => {
@@ -67,6 +91,44 @@ export function PostDetailLayout({ post }: PostDetailLayoutProps) {
           </div>
         </div>
 
+        {frame && (
+          <section className="overflow-hidden rounded-2xl border border-[#d7e7ec] bg-white shadow-[0_10px_28px_rgba(23,23,25,0.08)]" aria-label="Thông số frame">
+            <div className="h-1 bg-gradient-to-r from-[#0284c7] via-[#9ed9e4] to-[#f85ca8]" />
+            <div className="flex items-center gap-4 p-4 sm:p-5">
+              <div className="grid h-24 w-20 shrink-0 place-items-center rounded-xl border border-[#d7e7ec] bg-[#eff8fa]">
+                <div
+                  className="relative rounded-[3px] border-2 border-[#0284c7] bg-[repeating-linear-gradient(135deg,#fff_0_6px,#fce9ec_6px_12px)] shadow-[3px_3px_0_rgba(233,69,96,0.2)]"
+                  style={framePreviewStyle}
+                  aria-hidden="true"
+                >
+                  <span className="absolute inset-x-1/2 top-1/2 h-px w-2 -translate-x-1/2 bg-[#0284c7]/60" />
+                </div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-center gap-2 text-[#0284c7]">
+                  <Maximize2 size={14} />
+                  <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em]">Thông số frame</span>
+                </div>
+                <h3 className="mb-3 truncate text-base font-bold text-[#171719]">{frame.name || 'Frame'}</h3>
+                <dl className="grid grid-cols-3 gap-2">
+                  <div className="min-w-0 rounded-lg bg-[#f3f8fa] px-2.5 py-2">
+                    <dt className="text-[9px] font-medium uppercase text-[#716b67]">Rộng</dt>
+                    <dd className="mt-0.5 truncate text-sm font-bold text-[#171719]">{frameWidth > 0 ? `${frameWidth} px` : '—'}</dd>
+                  </div>
+                  <div className="min-w-0 rounded-lg bg-[#f3f8fa] px-2.5 py-2">
+                    <dt className="text-[9px] font-medium uppercase text-[#716b67]">Cao</dt>
+                    <dd className="mt-0.5 truncate text-sm font-bold text-[#171719]">{frameHeight > 0 ? `${frameHeight} px` : '—'}</dd>
+                  </div>
+                  <div className="min-w-0 rounded-lg bg-[#fff2f4] px-2.5 py-2">
+                    <dt className="text-[9px] font-medium uppercase text-[#8a4b58]">Tỉ lệ</dt>
+                    <dd className="mt-0.5 truncate text-sm font-bold text-[#c73652]">{frame.aspect_ratio || '—'}</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          </section>
+        )}
+
         <button
           onClick={handleApplyFrame}
           className="w-full py-4 rounded-xl bg-[#0f627a] hover:bg-[#0c4e62] text-white font-bold text-[16px] shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 mt-2"
@@ -96,13 +158,17 @@ export function PostDetailLayout({ post }: PostDetailLayoutProps) {
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-4">
               <div className="relative">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-400 to-teal-400 flex items-center justify-center text-white font-bold text-2xl shadow-inner">
-                  {post.account?.username?.charAt(0)?.toUpperCase() || 'U'}
-                </div>
+                {(post.account?.customer?.image || post.account?.avatarUrl || post.account?.avatar_url) ? (
+                  <img src={post.account?.customer?.image || post.account?.avatarUrl || post.account?.avatar_url} alt={post.account?.customer?.fullName || post.account?.customer?.full_name || post.account?.username} className="w-14 h-14 rounded-full object-cover shadow-inner" />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-400 to-teal-400 flex items-center justify-center text-white font-bold text-2xl shadow-inner">
+                    {(post.account?.customer?.fullName || post.account?.customer?.full_name || post.account?.full_name || post.account?.username || 'U').charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
               <div>
                 <h2 className="text-[18px] font-bold text-zinc-800 flex items-center gap-1.5">
-                  {post.account?.username || 'Người dùng ẩn danh'}
+                  {post.account?.customer?.fullName || post.account?.customer?.full_name || post.account?.full_name || post.account?.username || 'Người dùng ẩn danh'}
                 </h2>
                 <div className="text-[12px] text-zinc-400">{formatRelativeTime(post.created_at)}</div>
               </div>

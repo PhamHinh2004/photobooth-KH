@@ -2,22 +2,9 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { socialApi } from '../../api/social.api';
 import { useSocialSocket } from '../../hooks/useSocialSocket';
 import { CommentInput } from './CommentInput';
-import { CommentThread, CommentNode } from './CommentThread';
+import { CommentThread } from './CommentThread';
+import { buildCommentTree } from './commentTree';
 import { useAuthStore } from '../../stores/auth.store';
-
-function buildCommentTree(flatComments: any[]): CommentNode[] {
-  const map = new Map(flatComments.map((c) => [c.id, { ...c, replies: [] as CommentNode[] }]));
-  const roots: CommentNode[] = [];
-
-  for (const comment of map.values()) {
-    if (comment.parent_comment_id) {
-      map.get(comment.parent_comment_id)?.replies.push(comment);
-    } else {
-      roots.push(comment);
-    }
-  }
-  return roots;
-}
 
 export function DiscussionSection({ postId }: { postId: string }) {
   const token = useAuthStore((state) => state.token);
@@ -28,9 +15,10 @@ export function DiscussionSection({ postId }: { postId: string }) {
     async function fetchComments() {
       try {
         const data = await socialApi.getComments(postId);
-        setInitialComments(data || []);
+        const comments = Array.isArray(data) ? data : [];
+        setInitialComments(comments);
         // Seed live comments state
-        setLiveComments(data || []);
+        setLiveComments(comments);
       } catch (err) {
         console.error(err);
       }

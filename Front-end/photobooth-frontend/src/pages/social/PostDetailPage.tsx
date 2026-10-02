@@ -28,7 +28,7 @@ export default function PostDetailPage() {
 
   if (loading) {
     return (
-      <div className="bg-zinc-50 min-h-screen flex justify-center items-center">
+      <div className="min-h-screen flex justify-center items-center">
         <Spin size="large" />
       </div>
     );
@@ -36,7 +36,7 @@ export default function PostDetailPage() {
 
   if (!post) {
     return (
-      <div className="bg-zinc-50 min-h-screen flex flex-col justify-center items-center">
+      <div className="min-h-screen flex flex-col justify-center items-center">
         <h2 className="text-2xl font-bold mb-4">Không tìm thấy bài viết</h2>
         <button onClick={() => navigate('/reviews')} className="text-pink-500 hover:underline">
           Quay lại trang cộng đồng
@@ -46,7 +46,7 @@ export default function PostDetailPage() {
   }
 
   return (
-    <div className="bg-zinc-50 min-h-screen pb-16">
+    <div className="min-h-screen pb-16">
       <div className="max-w-6xl mx-auto px-4 py-4">
         <button 
           onClick={() => navigate('/reviews')} 

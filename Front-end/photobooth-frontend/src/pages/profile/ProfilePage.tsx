@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { message } from 'antd'
 import { authApi } from '@/api/auth.api'
+import { socialApi } from '@/api/social.api'
 import { useAuthStore } from '@/stores/auth.store'
 import type { CustomerProfile, PhotoSession } from '@/types/auth.types'
 import './ProfilePage.css'
@@ -9,6 +10,18 @@ import './ProfilePage.css'
 type Province = { code: number; name: string }
 type HistoryFilter = 'all' | 'solo' | 'group'
 type SortOrder = 'newest' | 'oldest'
+
+const PAGE_SIZE = 9
+
+// Unified memory item combining PhotoSession + social posts
+type MemoryItem = {
+  id: string
+  sessionType: 'solo' | 'group'
+  imageUrl: string
+  title: string | null
+  createdAt: string
+  source: 'history' | 'post'
+}
 
 const provinceApiUrl = 'https://provinces.open-api.vn/api/?depth=1'
 
@@ -19,15 +32,17 @@ const ProfilePage = () => {
   const setAuthUser = useAuthStore((state) => state.setUser)
   const [profile, setProfile] = useState<CustomerProfile | null>(null)
   const [provinces, setProvinces] = useState<Province[]>([])
-  const [history, setHistory] = useState<PhotoSession[]>([])
+  const [history, setHistory] = useState<MemoryItem[]>([])
   const [filter, setFilter] = useState<HistoryFilter>('all')
   const [sort, setSort] = useState<SortOrder>('newest')
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [historyLoading, setHistoryLoading] = useState(false)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [form, setForm] = useState({ fullName: '', birthday: '', city: '', gender: 'others' as CustomerProfile['gender'], image: '' })
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
   useEffect(() => {
     const load = async () => {
@@ -51,11 +66,60 @@ const ProfilePage = () => {
 
   useEffect(() => {
     const loadHistory = async () => {
+      setHistoryLoading(true)
       try {
-        const result = await authApi.getMyPhotoHistory({ type: filter === 'all' ? undefined : filter, order: sort })
-        setHistory(result.data)
+        // Lấy cả 2 nguồn dữ liệu song song
+        const [histResult, postsResult] = await Promise.allSettled([
+          authApi.getMyPhotoHistory({ type: filter === 'all' ? undefined : filter, order: sort }),
+          filter === 'group' ? Promise.resolve(null) : socialApi.getMyPosts(1, 100),
+        ])
+
+        // Ảnh từ photo_sessions (lần chụp mới)
+        const sessionItems: MemoryItem[] = histResult.status === 'fulfilled'
+          ? (histResult.value.data || []).map((s: PhotoSession) => ({
+              id: s.id,
+              sessionType: s.sessionType,
+              imageUrl: s.imageUrl,
+              title: s.title,
+              createdAt: typeof s.createdAt === 'string' ? s.createdAt : new Date(s.createdAt).toISOString(),
+              source: 'history' as const,
+            }))
+          : []
+
+        // Ảnh từ các bài đăng xã hội (backfill dữ liệu cũ)
+        const postItems: MemoryItem[] = postsResult.status === 'fulfilled' && postsResult.value
+          ? ((postsResult.value as any)?.data || []).map((p: any) => ({
+              id: `post-${p.id}`,
+              sessionType: (p.session?.session_type === 'group' ? 'group' : 'solo') as 'solo' | 'group',
+              imageUrl: p.cover_image_url,
+              title: p.session?.photo?.frame?.name || p.caption || null,
+              createdAt: p.created_at,
+              source: 'post' as const,
+            }))
+          : []
+
+        // Hợp nhất, loại bỏ trùng lặp theo imageUrl, sắp xếp theo ngày
+        const usedUrls = new Set<string>()
+        const merged: MemoryItem[] = []
+
+        for (const item of [...sessionItems, ...postItems]) {
+          if (!item.imageUrl || usedUrls.has(item.imageUrl)) continue
+          usedUrls.add(item.imageUrl)
+          merged.push(item)
+        }
+
+        merged.sort((a, b) =>
+          sort === 'oldest'
+            ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+
+        setHistory(merged)
+        setVisibleCount(PAGE_SIZE)
       } catch {
         message.error('Không thể tải lịch sử chụp.')
+      } finally {
+        setHistoryLoading(false)
       }
     }
     if (profile) void loadHistory()
@@ -66,6 +130,8 @@ const ProfilePage = () => {
   const groupPhotos = history.filter((photo) => photo.sessionType === 'group').length
   const displayImage = previewImage || form.image || profile?.image
   const initials = useMemo(() => (profile?.fullName || 'KH').split(' ').map((part) => part[0]).slice(-2).join('').toUpperCase(), [profile?.fullName])
+  const visibleHistory = history.slice(0, visibleCount)
+  const hasMore = visibleCount < history.length
 
   const updateField = (field: keyof typeof form, value: string) => setForm((current) => ({ ...current, [field]: value }))
 
@@ -141,7 +207,123 @@ const ProfilePage = () => {
             <div className="joined-date"><span>◷</span><div><small>NGÀY GIA NHẬP</small><strong>{formatDate(profile.account.createdAt)}</strong></div></div>
           </article>
 
-          <article className="profile-card history-card chrome-panel"><div className="window-strip"><span>MEMORIES.LOG</span><i /><i /><b /></div><div className="card-heading"><div><p className="profile-kicker">YOUR MEMORIES</p><h2>Lịch sử chụp</h2></div><select value={sort} onChange={(event) => setSort(event.target.value as SortOrder)}><option value="newest">Mới nhất</option><option value="oldest">Cũ nhất</option></select></div><div className="history-tabs"><button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>Tất cả</button><button className={filter === 'solo' ? 'active' : ''} onClick={() => setFilter('solo')}>Chụp đơn</button><button className={filter === 'group' ? 'active' : ''} onClick={() => setFilter('group')}>Chụp nhóm</button></div>{history.length ? <div className="photo-grid">{history.map((photo) => <figure key={photo.id}><img src={photo.imageUrl} alt={photo.title || 'Ảnh photobooth'} /><figcaption><span>{photo.sessionType === 'solo' ? 'SOLO' : 'GROUP'}</span><small>{formatDate(photo.createdAt)}</small></figcaption></figure>)}</div> : <div className="history-empty"><span>✦</span><h3>Chưa có kỷ niệm nào</h3><p>Những bức ảnh bạn lưu lại sẽ xuất hiện ở đây.</p><button onClick={() => navigate('/')}>BẮT ĐẦU CHỤP ↗</button></div>}</article>
+          <article className="profile-card history-card chrome-panel">
+            <div className="window-strip"><span>MEMORIES.LOG</span><i /><i /><b /></div>
+
+            {/* Header */}
+            <div className="card-heading">
+              <div>
+                <p className="profile-kicker">YOUR MEMORIES</p>
+                <h2>Lịch sử chụp</h2>
+              </div>
+              <select value={sort} onChange={(event) => setSort(event.target.value as SortOrder)}>
+                <option value="newest">Mới nhất</option>
+                <option value="oldest">Cũ nhất</option>
+              </select>
+            </div>
+
+            {/* Stats bar */}
+            {history.length > 0 && (
+              <div className="history-stats-bar">
+                <div className="history-stat">
+                  <span className="history-stat-value">{totalPhotos}</span>
+                  <span className="history-stat-label">Tổng lần chụp</span>
+                </div>
+                <div className="history-stat">
+                  <span className="history-stat-value solo">{soloPhotos}</span>
+                  <span className="history-stat-label">Chụp đơn</span>
+                </div>
+                <div className="history-stat">
+                  <span className="history-stat-value group">{groupPhotos}</span>
+                  <span className="history-stat-label">Chụp nhóm</span>
+                </div>
+              </div>
+            )}
+
+            {/* Filter tabs */}
+            <div className="history-tabs">
+              <button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>
+                Tất cả {filter === 'all' && history.length > 0 && <span className="tab-badge">{totalPhotos}</span>}
+              </button>
+              <button className={filter === 'solo' ? 'active' : ''} onClick={() => setFilter('solo')}>
+                Chụp đơn {filter === 'solo' && history.length > 0 && <span className="tab-badge">{soloPhotos}</span>}
+              </button>
+              <button className={filter === 'group' ? 'active' : ''} onClick={() => setFilter('group')}>
+                Chụp nhóm {filter === 'group' && history.length > 0 && <span className="tab-badge">{groupPhotos}</span>}
+              </button>
+            </div>
+
+            {/* Loading state */}
+            {historyLoading ? (
+              <div className="history-loading">
+                <div className="history-loading-dots">
+                  <span /><span /><span />
+                </div>
+                <p>Đang tải lịch sử...</p>
+              </div>
+            ) : history.length ? (
+              <>
+                <div className="photo-grid">
+                  {visibleHistory.map((photo) => (
+                    <figure key={photo.id} className="photo-card">
+                      <div className="photo-card-img-wrap">
+                        <img src={photo.imageUrl} alt={photo.title || 'Ảnh photobooth'} loading="lazy" />
+                        <div className="photo-card-overlay">
+                          <span className={`photo-type-badge ${photo.sessionType}`}>
+                            {photo.sessionType === 'solo' ? '👤 Solo' : '👥 Nhóm'}
+                          </span>
+                          {photo.source === 'post' && (
+                            <span className="photo-source-badge">📢 Đã đăng</span>
+                          )}
+                          <button
+                            className="photo-view-btn"
+                            onClick={() => window.open(photo.imageUrl, '_blank')}
+                          >
+                            🔍 Xem ảnh
+                          </button>
+                        </div>
+                      </div>
+                      <figcaption>
+                        <span className={`session-dot ${photo.sessionType}`} />
+                        <small>{formatDate(photo.createdAt)}</small>
+                        {photo.title && <small className="photo-title-label" title={photo.title}>— {photo.title.length > 18 ? photo.title.slice(0, 18) + '…' : photo.title}</small>}
+                      </figcaption>
+                    </figure>
+                  ))}
+                </div>
+
+                {/* Show more / summary */}
+                <div className="history-footer">
+                  <span className="history-showing">
+                    Hiển thị <strong>{visibleHistory.length}</strong> / <strong>{history.length}</strong> lần chụp
+                  </span>
+                  {hasMore && (
+                    <button
+                      className="load-more-btn"
+                      onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                    >
+                      Xem thêm {Math.min(PAGE_SIZE, history.length - visibleCount)} ảnh ↓
+                    </button>
+                  )}
+                  {!hasMore && history.length > PAGE_SIZE && (
+                    <button
+                      className="collapse-btn"
+                      onClick={() => setVisibleCount(PAGE_SIZE)}
+                    >
+                      Thu gọn ↑
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="history-empty">
+                <span>✦</span>
+                <h3>Chưa có kỷ niệm nào</h3>
+                <p>Những bức ảnh bạn lưu lại sẽ xuất hiện ở đây.</p>
+                <button onClick={() => navigate('/capture')}>BẮT ĐẦU CHỤP ↗</button>
+              </div>
+            )}
+          </article>
         </section>
       </main>
     </div>

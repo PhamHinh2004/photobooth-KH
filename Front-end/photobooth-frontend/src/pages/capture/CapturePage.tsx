@@ -10,6 +10,7 @@ import {
   createSessionResult
 } from '@/api/capture.api'
 import { socialApi } from '@/api/social.api'
+import { authApi } from '@/api/auth.api'
 
 import PackageSelector, { PACKAGE_OPTIONS } from '@/components/capture/step1/PackageSelector'
 import FrameSelector from '@/components/capture/step2/FrameSelector'
@@ -25,14 +26,19 @@ export default function CapturePage() {
   const location = useLocation()
   const { user, isAuthenticated } = useAuthStore()
 
+  const initialFrameId = location.state?.initialFrameId as string | undefined
   const initialFrame = location.state?.initialFrame as Frame | undefined
 
   const [step, setStep] = useState<'package-select' | 'frame-select' | 'capturing' | 'review' | 'filter' | 'result'>(
-    initialFrame ? 'capturing' : 'package-select'
+    initialFrameId ? 'frame-select' : initialFrame ? 'capturing' : 'package-select'
   )
   
   const [selectedPackage, setSelectedPackage] = useState<PackageOption | null>(() => {
     if (initialFrame) {
+      if (initialFrame.aspect_ratio) {
+        const exactMatch = PACKAGE_OPTIONS.find(p => p.id === initialFrame.aspect_ratio);
+        if (exactMatch) return exactMatch;
+      }
       const slotsCount = initialFrame.layout_config?.slots?.length || 4;
       const found = PACKAGE_OPTIONS.find(p => p.slotsCount === slotsCount);
       return found || PACKAGE_OPTIONS[0];
@@ -95,6 +101,22 @@ export default function CapturePage() {
   }
 
   function handleSelectFrame(frame: Frame) {
+    if (!selectedPackage) {
+      if (frame.aspect_ratio) {
+        const exactMatch = PACKAGE_OPTIONS.find(p => p.id === frame.aspect_ratio);
+        if (exactMatch) {
+          setSelectedPackage(exactMatch);
+        } else {
+          const slotsCount = frame.layout_config?.slots?.length || 4;
+          const found = PACKAGE_OPTIONS.find(p => p.slotsCount === slotsCount);
+          setSelectedPackage(found || PACKAGE_OPTIONS[0]);
+        }
+      } else {
+        const slotsCount = frame.layout_config?.slots?.length || 4;
+        const found = PACKAGE_OPTIONS.find(p => p.slotsCount === slotsCount);
+        setSelectedPackage(found || PACKAGE_OPTIONS[0]);
+      }
+    }
     setSelectedFrame(frame)
     setStep('capturing')
   }
@@ -170,6 +192,21 @@ export default function CapturePage() {
 
           const sessionResult = await createSessionResult(sessionPayload)
           setCreatedSessionId(sessionResult.id)
+
+          // Đồng bộ vào lịch sử chụp (photo_sessions) để hiện trong Profile
+          if (photoRes?.processed_file_url) {
+            try {
+              await authApi.saveMyPhoto({
+                sessionType: 'solo',
+                imageUrl: photoRes.processed_file_url,
+                title: selectedFrame?.name || undefined,
+              })
+            } catch (syncErr) {
+              // Lỗi đồng bộ không ảnh hưởng flow chính
+              console.warn('Không thể đồng bộ vào lịch sử chụp:', syncErr)
+            }
+          }
+
           setUploadSuccess(true)
         } catch (err: any) {
           console.error('Lỗi khi tải kết quả lên:', err)
@@ -366,6 +403,7 @@ export default function CapturePage() {
             {step === 'frame-select' && (
               <FrameSelector
                 selectedPackage={selectedPackage}
+                initialFrameId={initialFrameId}
                 onSelect={handleSelectFrame}
                 onBack={() => setStep('package-select')}
               />

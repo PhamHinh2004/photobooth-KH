@@ -29,7 +29,7 @@ function StatItem({ icon, value, label, iconBg, iconColor }: StatItemProps) {
 
 export function HeroSection({ stats }: { stats: { rating: number; views: string; satisfaction: string } }) {
   return (
-    <section className="text-center pt-16 pb-8 px-4 bg-gradient-to-b from-purple-50/50 via-pink-50/30 to-zinc-50 mt-20">
+    <section className="text-center pt-16 pb-8 px-4 bg-transparent mt-20">
       <h1 className="text-4xl font-extrabold mb-3 text-zinc-800 tracking-tight">
         Cộng Đồng Đánh Giá &{' '}
         <span className="bg-gradient-to-r from-purple-600 via-pink-500 to-pink-500 bg-clip-text text-transparent">

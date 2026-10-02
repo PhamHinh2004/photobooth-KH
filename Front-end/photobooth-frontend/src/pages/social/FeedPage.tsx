@@ -37,15 +37,10 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="bg-zinc-50 min-h-screen pb-16">
+    <div className="min-h-screen pb-16">
       <HeroSection stats={stats} />
       
       <div className="max-w-6xl mx-auto px-4 mt-8">
-        <div className="mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
-          <FilterTabs active={activeTab} onChange={setActiveTab} />
-          {isConnected && <span className="text-xs text-green-500 font-medium px-3 py-1 bg-green-50 rounded-full border border-green-200">● Live Updates</span>}
-        </div>
-
         {loading ? (
           <div className="flex justify-center py-20">
             <Spin size="large" />
@@ -57,7 +52,7 @@ export default function FeedPage() {
             <p className="text-zinc-500">Hãy là người đầu tiên chia sẻ khoảnh khắc tại KH BOOTH!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
             {feed.map((post) => (
               <PostCard key={post.id} post={post} />
             ))}
