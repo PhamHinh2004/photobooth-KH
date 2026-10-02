@@ -89,7 +89,7 @@ export const socialApi = {
     const { data } = await axiosInstance.post('/comments', payload);
     return data;
   },
-  createPost: async (payload: { session_id: string; caption?: string; cover_image_url: string; style_tags?: string[] }) => {
+  createPost: async (payload: { session_id: string; caption?: string; cover_image_url: string; style_tags?: string[]; rating?: number }) => {
     const { data } = await axiosInstance.post('/posts', payload);
     return data;
   },

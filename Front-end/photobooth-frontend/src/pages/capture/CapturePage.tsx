@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Spin, Modal, Input } from 'antd'
+import { Spin, Modal, Input, Rate } from 'antd'
 import { useAuthStore } from '@/stores/auth.store'
 import {
   getCustomerByAccountId,
@@ -77,6 +77,7 @@ export default function CapturePage() {
   const [shareError, setShareError] = useState<string | null>(null)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [captionText, setCaptionText] = useState('Vừa chụp bộ ảnh thật cool tại KH BOOTH AI! 😎✨')
+  const [frameRating, setFrameRating] = useState<number>(5)
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
@@ -238,11 +239,12 @@ export default function CapturePage() {
     setIsSharing(true)
     setShareError(null)
     try {
-      const post = await socialApi.createPost({
+      await socialApi.createPost({
         session_id: createdSessionId,
         cover_image_url: uploadedResults.photo.processed_file_url,
         caption: captionText,
-        style_tags: ['#khbooth', '#photobooth', '#ai']
+        style_tags: ['#khbooth', '#photobooth', '#ai'],
+        rating: frameRating,
       })
       setIsShareModalOpen(false)
       navigate(`/reviews`)
@@ -542,6 +544,10 @@ export default function CapturePage() {
         okButtonProps={{ className: "bg-[#FF00FF] hover:bg-[#D500D5] border-none" }}
       >
         <div className="flex flex-col gap-4 mt-4">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-gray-700">Đánh giá Frame:</span>
+            <Rate value={frameRating} onChange={setFrameRating} className="text-[#FF00FF]" />
+          </div>
           <Input.TextArea
             value={captionText}
             onChange={(e) => setCaptionText(e.target.value)}

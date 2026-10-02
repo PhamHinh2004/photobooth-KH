@@ -1,7 +1,7 @@
 // frames/entities/frame.entity.ts
 import {
   Entity, Column, PrimaryGeneratedColumn, ManyToOne,
-  CreateDateColumn, UpdateDateColumn, JoinColumn,
+  CreateDateColumn, UpdateDateColumn, JoinColumn, Index
 } from 'typeorm';
 import { Account } from '../../accounts/entities/account.entity';
 
@@ -28,6 +28,7 @@ export enum FrameAspectRatio {
 }
 
 @Entity('frame')
+@Index('idx_frame_rating', ['rating'], { where: 'is_active = true' })
 export class Frame {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -59,6 +60,12 @@ export class Frame {
     canvas_height: number;
     slots: { x: number; y: number; width: number; height: number }[];
   };
+
+  @Column({ type: 'double precision', default: 0 })
+  rating: number;
+
+  @Column({ type: 'int', default: 0 })
+  rating_count: number;
 
   @Column({ default: true })
   is_active: boolean;

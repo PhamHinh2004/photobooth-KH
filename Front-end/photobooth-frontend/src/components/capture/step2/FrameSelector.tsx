@@ -231,16 +231,25 @@ export default function FrameSelector({ selectedPackage, initialFrameId, onSelec
                 <div>
                   {/* Top Badges */}
                   <div className="flex items-center justify-between mb-3">
-                    {isSelected ? (
-                      <span className="px-3 py-1 rounded-full text-[10px] font-black bg-[#d946ef] text-white uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                        ĐANG CHỌN
-                      </span>
-                    ) : (
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${badge.bg}`}>
-                        {badge.label}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isSelected ? (
+                        <span className="px-3 py-1 rounded-full text-[10px] font-black bg-[#d946ef] text-white uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                          ĐANG CHỌN
+                        </span>
+                      ) : (
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${badge.bg}`}>
+                          {badge.label}
+                        </span>
+                      )}
+                      {(frame.rating_count && frame.rating_count > 0) ? (
+                        <span className="text-xs font-bold text-amber-500 flex items-center gap-0.5">
+                          ⭐ {frame.rating?.toFixed(1)} <span className="text-gray-400 font-normal">({frame.rating_count})</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-gray-400 font-medium">Chưa có ĐG</span>
+                      )}
+                    </div>
                     <span className="text-gray-400 text-[10px] font-mono font-medium">{code}</span>
                   </div>
 
