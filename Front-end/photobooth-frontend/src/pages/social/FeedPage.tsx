@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { HeroSection } from '../../components/social/HeroSection';
 import { FilterTabs } from '../../components/social/FilterTabs';
 import { PostCard } from '../../components/social/PostCard';
@@ -37,14 +37,17 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="bg-zinc-50 min-h-screen pb-16">
+    <div className="min-h-screen pb-16">
       <HeroSection stats={stats} />
-      
+
       <div className="max-w-6xl mx-auto px-4 mt-8">
-        <div className="mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
-          <FilterTabs active={activeTab} onChange={setActiveTab} />
-          {isConnected && <span className="text-xs text-green-500 font-medium px-3 py-1 bg-green-50 rounded-full border border-green-200">● Live Updates</span>}
+        <div className="flex items-center justify-end mb-4">
+          <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] ${isConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-200 text-zinc-600'}`}>
+            {isConnected ? 'Live' : 'Offline'}
+          </span>
         </div>
+
+        <FilterTabs active={activeTab} onChange={setActiveTab} />
 
         {loading ? (
           <div className="flex justify-center py-20">
@@ -57,7 +60,7 @@ export default function FeedPage() {
             <p className="text-zinc-500">Hãy là người đầu tiên chia sẻ khoảnh khắc tại KH BOOTH!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
             {feed.map((post) => (
               <PostCard key={post.id} post={post} />
             ))}

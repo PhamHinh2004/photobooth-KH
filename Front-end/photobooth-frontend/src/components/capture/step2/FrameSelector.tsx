@@ -5,11 +5,12 @@ import type { Frame, PackageOption } from '@/types/capture.types'
 
 interface FrameSelectorProps {
   selectedPackage?: PackageOption | null
+  initialFrameId?: string
   onSelect: (frame: Frame) => void
   onBack: () => void
 }
 
-export default function FrameSelector({ selectedPackage, onSelect, onBack }: FrameSelectorProps) {
+export default function FrameSelector({ selectedPackage, initialFrameId, onSelect, onBack }: FrameSelectorProps) {
   const [frames, setFrames] = useState<Frame[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -46,7 +47,8 @@ export default function FrameSelector({ selectedPackage, onSelect, onBack }: Fra
       .then((data) => {
         setFrames(data)
         if (data.length > 0) {
-          setSelectedFrame(data[0])
+          const matchedFrame = initialFrameId ? data.find(f => f.id === initialFrameId) : null;
+          setSelectedFrame(matchedFrame || data[0])
         }
       })
       .catch(() => setError('Không tải được danh sách frame. Vui lòng thử lại.'))

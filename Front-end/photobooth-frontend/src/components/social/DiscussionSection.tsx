@@ -1,50 +1,39 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { socialApi } from '../../api/social.api';
 import { useSocialSocket } from '../../hooks/useSocialSocket';
 import { CommentInput } from './CommentInput';
-import { CommentThread, CommentNode } from './CommentThread';
+import { CommentThread } from './CommentThread';
+import { buildCommentTree } from './commentTree';
 import { useAuthStore } from '../../stores/auth.store';
 
-function buildCommentTree(flatComments: any[]): CommentNode[] {
-  const map = new Map(flatComments.map((c) => [c.id, { ...c, replies: [] as CommentNode[] }]));
-  const roots: CommentNode[] = [];
-
-  for (const comment of map.values()) {
-    if (comment.parent_comment_id) {
-      map.get(comment.parent_comment_id)?.replies.push(comment);
-    } else {
-      roots.push(comment);
-    }
-  }
-  return roots;
-}
-
-export function DiscussionSection({ postId }: { postId: string }) {
+export function DiscussionSection({ postId, onCommentDeleted }: { postId: string; onCommentDeleted?: () => void }) {
   const token = useAuthStore((state) => state.token);
   const { comments: liveComments, setComments: setLiveComments, joinPost, leavePost } = useSocialSocket(token || undefined);
-  const [initialComments, setInitialComments] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetchComments() {
       try {
         const data = await socialApi.getComments(postId);
-        setInitialComments(data || []);
-        // Seed live comments state
-        setLiveComments(data || []);
+        const comments = Array.isArray(data) ? data : [];
+        setLiveComments(comments);
       } catch (err) {
         console.error(err);
       }
     }
     fetchComments();
-    
+
     joinPost(postId);
-    
+
     return () => {
       leavePost(postId);
     };
-  }, [postId]);
+  }, [joinPost, leavePost, postId, setLiveComments]);
 
   const tree = useMemo(() => buildCommentTree(liveComments), [liveComments]);
+  const handleCommentDeleted = (commentId: string) => {
+    setLiveComments((current) => current.filter((comment) => comment.id !== commentId));
+    onCommentDeleted?.();
+  };
 
   return (
     <section className="mt-8 border-t border-zinc-100 pt-8">
@@ -53,7 +42,7 @@ export function DiscussionSection({ postId }: { postId: string }) {
       
       <div className="space-y-6">
         {tree.map((c) => (
-          <CommentThread key={c.id} comment={c} />
+          <CommentThread key={c.id} comment={c} onDelete={handleCommentDeleted} />
         ))}
       </div>
     </section>

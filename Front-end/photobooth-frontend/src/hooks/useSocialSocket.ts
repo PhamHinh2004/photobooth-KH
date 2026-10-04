@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { attachCustomerProfiles } from '../api/social.api';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
 
@@ -57,13 +58,16 @@ export const useSocialSocket = (token?: string) => {
   const joinPost = (postId: string) => {
     if (socket) {
       socket.emit('join:post', postId);
-      socket.on('comment:created', (comment) => {
-        setComments((prev) => [...prev, comment]);
+      socket.on('comment:created', async (comment) => {
+        const [enrichedComment] = await attachCustomerProfiles([comment]);
+        setComments((prev) => [...prev, enrichedComment]);
       });
       socket.on('comment:updated', (updatedComment) => {
         setComments((prev) => prev.map((c) => (c.id === updatedComment.id ? updatedComment : c)));
       });
-      socket.on('comment:deleted', (commentId) => {
+      socket.on('comment:deleted', (payload: string | { id?: string }) => {
+        const commentId = typeof payload === 'string' ? payload : payload.id;
+        if (!commentId) return;
         setComments((prev) => prev.filter((c) => c.id !== commentId));
       });
     }
