@@ -21,6 +21,8 @@ import { SessionResultsModule } from './modules/session-results/session-results.
 import { PostsModule } from './modules/posts/posts.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { SocialModule } from './modules/social/social.module';
+import { RoomsModule } from './modules/rooms/rooms.module';
+import { RedisModule } from './modules/redis/redis.module';
 
 @Module({
   imports: [
@@ -50,6 +52,8 @@ import { SocialModule } from './modules/social/social.module';
     PostsModule,
     CommentsModule,
     SocialModule,
+    RedisModule,
+    RoomsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
