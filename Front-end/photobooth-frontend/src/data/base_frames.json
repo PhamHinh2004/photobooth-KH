@@ -1,7 +1,8 @@
 [
   {
     "id": "2x2",
-    "session_type_supported": "single",
+    "session_type_supported": "both",
+    "supported_group_sizes": [2, 4],
     "layout_config": {
       "canvas_width": 418,
       "canvas_height": 537,
@@ -15,7 +16,8 @@
   },
   {
     "id": "1x4",
-    "session_type_supported": "single",
+    "session_type_supported": "both",
+    "supported_group_sizes": [2, 4],
     "layout_config": {
       "canvas_width": 221,
       "canvas_height": 959,
@@ -29,7 +31,8 @@
   },
   {
     "id": "3x2",
-    "session_type_supported": "single",
+    "session_type_supported": "both",
+    "supported_group_sizes": [2, 3, 5],
     "layout_config": {
       "canvas_width": 418,
       "canvas_height": 748,
@@ -45,7 +48,8 @@
   },
   {
     "id": "2x3",
-    "session_type_supported": "single",
+    "session_type_supported": "both",
+    "supported_group_sizes": [5, 6],
     "layout_config": {
       "canvas_width": 615,
       "canvas_height": 537,
@@ -61,7 +65,8 @@
   },
   {
     "id": "4x2",
-    "session_type_supported": "single",
+    "session_type_supported": "both",
+    "supported_group_sizes": [4, 7],
     "layout_config": {
       "canvas_width": 418,
       "canvas_height": 959,
@@ -79,7 +84,8 @@
   },
   {
     "id": "2x4",
-    "session_type_supported": "single",
+    "session_type_supported": "both",
+    "supported_group_sizes": [7, 8],
     "layout_config": {
       "canvas_width": 812,
       "canvas_height": 537,

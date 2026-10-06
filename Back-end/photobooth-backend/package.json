@@ -40,6 +40,8 @@
     "class-validator": "^0.15.1",
     "compression": "^1.8.1",
     "helmet": "^8.3.0",
+    "ioredis": "^5.11.1",
+    "livekit-server-sdk": "^2.19.1",
     "nest-winston": "^1.10.2",
     "nodemailer": "^10.0.3",
     "passport": "^0.7.0",

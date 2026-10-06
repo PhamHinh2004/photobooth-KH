@@ -16,8 +16,9 @@ const HomePage: React.FC = () => {
       message.warning('Vui lòng nhập mã phòng chụp!')
       return
     }
-    message.success(`Đang tham gia phòng: ${sessionCode.trim().toUpperCase()}`)
-    navigate(isAuthenticated ? '/' : '/login')
+    const code = sessionCode.trim().toUpperCase()
+    message.success(`Đang tham gia phòng: ${code}`)
+    navigate(isAuthenticated ? `/group/join/${code}` : `/login?redirect=/group/join/${code}`)
   }
 
   const handleStartShooting = () => navigate(isAuthenticated ? '/capture' : '/login')

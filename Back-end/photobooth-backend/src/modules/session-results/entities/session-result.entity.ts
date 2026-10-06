@@ -61,6 +61,9 @@ export class SessionResult {
   @Column({ type: 'uuid', nullable: true })
   gif_id: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  room_id: string;
+
   @Column({ type: 'enum', enum: SessionResultStatus, default: SessionResultStatus.PENDING })
   status: SessionResultStatus;
 
