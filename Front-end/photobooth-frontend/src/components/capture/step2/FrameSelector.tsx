@@ -53,7 +53,7 @@ export default function FrameSelector({ selectedPackage, initialFrameId, onSelec
       })
       .catch(() => setError('Không tải được danh sách frame. Vui lòng thử lại.'))
       .finally(() => setLoading(false))
-  }, [selectedPackage, debouncedSearchQuery])
+  }, [selectedPackage, debouncedSearchQuery, initialFrameId])
 
   const filteredFrames = frames.filter((frame) => {
     if (selectedTag === 'all') return true

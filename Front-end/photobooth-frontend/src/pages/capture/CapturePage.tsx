@@ -11,6 +11,7 @@ import {
 } from '@/api/capture.api'
 import { socialApi } from '@/api/social.api'
 import { authApi } from '@/api/auth.api'
+import AiFrameAssistant from '@/components/assistant/AiFrameAssistant'
 
 import PackageSelector, { PACKAGE_OPTIONS } from '@/components/capture/step1/PackageSelector'
 import FrameSelector from '@/components/capture/step2/FrameSelector'
@@ -95,6 +96,17 @@ export default function CapturePage() {
       })
       .finally(() => setCustomerLoading(false))
   }, [isAuthenticated, user, navigate])
+
+  useEffect(() => {
+    if (!initialFrame) return
+
+    const matchingPackage = PACKAGE_OPTIONS.find((option) => option.id === initialFrame.aspect_ratio)
+      || PACKAGE_OPTIONS.find((option) => option.slotsCount === (initialFrame.layout_config?.slots?.length || 4))
+
+    setSelectedFrame(initialFrame)
+    setSelectedPackage(matchingPackage || PACKAGE_OPTIONS[0])
+    setStep('frame-select')
+  }, [initialFrame, initialFrameId])
 
   function handleSelectPackage(pkg: PackageOption) {
     setSelectedPackage(pkg)
@@ -557,6 +569,7 @@ export default function CapturePage() {
         </div>
         {shareError && <p className="text-red-500 mt-2 text-sm">{shareError}</p>}
       </Modal>
+      <AiFrameAssistant />
     </div>
   )
 }
