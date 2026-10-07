@@ -16,6 +16,12 @@ import FeedPage from '../pages/social/FeedPage'
 import PostDetailPage from '../pages/social/PostDetailPage'
 import MyPostsPage from '../pages/social/MyPostsPage'
 import PublicLayout from '../components/layouts/PublicLayout'
+import GroupSetupPage from '../features/group-capture/pages/GroupSetupPage'
+import GroupFramePage from '../features/group-capture/pages/GroupFramePage'
+import GroupJoinPage from '../features/group-capture/pages/GroupJoinPage'
+import GroupLobbyPage from '../features/group-capture/pages/GroupLobbyPage'
+import GroupStudioPage from '../features/group-capture/pages/GroupStudioPage'
+import GroupResultPage from '../features/group-capture/pages/GroupResultPage'
 
 const routes: RouteObject[] = [
   // Auth routes (không cần đăng nhập)
@@ -101,6 +107,32 @@ const routes: RouteObject[] = [
   {
     path: '/my-posts',
     element: <PublicLayout><MyPostsPage /></PublicLayout>,
+  },
+
+  // Group Capture
+  {
+    path: '/group/new',
+    element: <PublicLayout><GroupSetupPage /></PublicLayout>,
+  },
+  {
+    path: '/group/new/frame',
+    element: <PublicLayout><GroupFramePage /></PublicLayout>,
+  },
+  {
+    path: '/group/join/:code',
+    element: <PublicLayout><GroupJoinPage /></PublicLayout>,
+  },
+  {
+    path: '/group/:code/lobby',
+    element: <PublicLayout><GroupLobbyPage /></PublicLayout>,
+  },
+  {
+    path: '/group/:code/studio',
+    element: <PublicLayout><GroupStudioPage /></PublicLayout>,
+  },
+  {
+    path: '/group/:code/result',
+    element: <PublicLayout><GroupResultPage /></PublicLayout>,
   },
 
   // Fallback
