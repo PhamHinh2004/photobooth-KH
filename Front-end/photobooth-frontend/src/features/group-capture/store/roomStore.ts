@@ -14,6 +14,8 @@ interface GroupCaptureState {
   
   selectedFrameId: string | null;
   setSelectedFrameId: (id: string | null) => void;
+  selectedLayoutId: string | null;
+  setSelectedLayoutId: (id: string | null) => void;
 }
 
 export const useGroupCaptureStore = create<GroupCaptureState>((set) => ({
@@ -29,4 +31,6 @@ export const useGroupCaptureStore = create<GroupCaptureState>((set) => ({
   
   selectedFrameId: null,
   setSelectedFrameId: (id) => set({ selectedFrameId: id }),
+  selectedLayoutId: null,
+  setSelectedLayoutId: (id) => set({ selectedLayoutId: id }),
 }));

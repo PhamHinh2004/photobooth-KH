@@ -12,6 +12,7 @@ import { Account } from '../../accounts/entities/account.entity';
 import { Photo } from '../../photos/entities/photo.entity';
 import { Recording } from '../../recordings/entities/recording.entity';
 import { Gif } from '../../gifs/entities/gif.entity';
+import { Room } from '../../rooms/entities/room.entity';
 
 export enum SessionType {
   SINGLE = 'single',
@@ -63,6 +64,10 @@ export class SessionResult {
 
   @Column({ type: 'uuid', nullable: true })
   room_id: string;
+
+  @ManyToOne(() => Room, { nullable: true })
+  @JoinColumn({ name: 'room_id' })
+  room: Room | null;
 
   @Column({ type: 'enum', enum: SessionResultStatus, default: SessionResultStatus.PENDING })
   status: SessionResultStatus;

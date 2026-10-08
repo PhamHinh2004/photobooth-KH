@@ -56,6 +56,20 @@ export default function MyPostsPage() {
       ),
     },
     {
+      title: 'Loại chụp',
+      key: 'capture_type',
+      render: (_: any, record: any) => {
+        const isGroup = record.session?.session_type === 'group';
+        const groupName = record.session?.room?.name || record.session?.room?.room_code;
+        return (
+          <Space direction="vertical" size={2}>
+            <Tag color={isGroup ? 'magenta' : 'cyan'}>{isGroup ? 'Chụp Nhóm' : 'Chụp Đơn'}</Tag>
+            {isGroup && <span className="max-w-40 truncate text-xs text-zinc-500">{groupName || 'Phòng nhóm'}</span>}
+          </Space>
+        );
+      },
+    },
+    {
       title: 'Nội dung',
       dataIndex: 'caption',
       key: 'caption',

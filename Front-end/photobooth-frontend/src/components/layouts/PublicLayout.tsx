@@ -4,6 +4,7 @@ import { Dropdown, type MenuProps } from 'antd'
 import { message } from 'antd'
 import { useAuthStore } from '@/stores/auth.store'
 import { authApi } from '@/api/auth.api'
+import AiFrameAssistant from '@/components/assistant/AiFrameAssistant'
 
 interface PublicLayoutProps {
   children: React.ReactNode
@@ -150,6 +151,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
           <div className="text-outline text-sm">© 2026 Photobooth AI Y2K.</div>
         </div>
       </footer>
+      <AiFrameAssistant />
     </div>
   )
 }

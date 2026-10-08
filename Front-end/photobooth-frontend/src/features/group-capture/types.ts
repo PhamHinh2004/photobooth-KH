@@ -23,6 +23,7 @@ export interface Participant {
 export interface Room {
   id: string; 
   room_code: string; 
+  name?: string | null;
   host_account_id: string;
   max_participants: number; 
   countdown_seconds: number;
@@ -30,6 +31,7 @@ export interface Room {
   expires_at: string; // ISO
   participants?: Participant[];
   frame_id?: string;
+  edit_policy?: 'host_only' | 'all_participants';
 }
 
 // Payload realtime (namespace /rooms)

@@ -17,6 +17,7 @@ import { Response } from 'express';
 import { FileInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express';
 import { RoomsService } from './rooms.service';
 import { CreateRoomDto } from './dto/create-room.dto';
+import { RoomEditPolicy } from './room-capture.store';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -55,10 +56,24 @@ export class RoomsController {
     return this.roomsService.setReady(roomId, user.id);
   }
 
+  @Patch(':id/edit-policy')
+  setEditPolicy(
+    @Param('id') roomId: string,
+    @CurrentUser() user: { id: string },
+    @Body('policy') policy: RoomEditPolicy,
+  ) {
+    return this.roomsService.setEditPolicy(roomId, user.id, policy);
+  }
+
   @Post(':id/start-countdown')
   async startCountdown(@Param('id') roomId: string, @CurrentUser() user: { id: string }) {
     await this.roomsService.assertIsHost(roomId, user.id);
     return this.roomsService.startCountdown(roomId);
+  }
+
+  @Post(':id/open-studio')
+  openStudio(@Param('id') roomId: string, @CurrentUser() user: { id: string }) {
+    return this.roomsService.openStudio(roomId, user.id);
   }
 
   @Post(':id/captures')
@@ -72,9 +87,10 @@ export class RoomsController {
     @Param('id') roomId: string,
     @CurrentUser() user: { id: string },
     @UploadedFile() file: Express.Multer.File,
+    @Body('roundIndex', ParseIntPipe) roundIndex: number,
   ) {
     if (!file) throw new BadRequestException('File không hợp lệ');
-    return this.roomsService.submitCapture(roomId, user.id, file.buffer);
+    return this.roomsService.submitCapture(roomId, user.id, roundIndex, file.buffer);
   }
 
   @Get(':id/captures/:slotIndex')
@@ -84,8 +100,7 @@ export class RoomsController {
     @CurrentUser() user: { id: string },
     @Res() res: Response,
   ) {
-    await this.roomsService.assertIsHost(roomId, user.id);
-    const buf = await this.roomsService.getCaptureBuffer(roomId, slotIndex);
+    const buf = await this.roomsService.getCaptureBuffer(roomId, user.id, slotIndex);
     res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store' }).send(buf);
   }
 
@@ -120,7 +135,7 @@ export class RoomsController {
   }
 
   @Get(':id/result')
-  getResult(@Param('id') roomId: string) {
-    return this.roomsService.getResult(roomId);
+  getResult(@Param('id') roomId: string, @CurrentUser() user: { id: string }) {
+    return this.roomsService.getResult(roomId, user.id);
   }
 }

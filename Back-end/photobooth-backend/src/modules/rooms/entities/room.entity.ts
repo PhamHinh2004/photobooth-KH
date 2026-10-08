@@ -26,6 +26,9 @@ export class Room {
   @Column({ unique: true })
   room_code: string;
 
+  @Column({ type: 'varchar', length: 40, nullable: true })
+  name: string | null;
+
   @ManyToOne(() => Account)
   @JoinColumn({ name: 'host_account_id' })
   host: Account;

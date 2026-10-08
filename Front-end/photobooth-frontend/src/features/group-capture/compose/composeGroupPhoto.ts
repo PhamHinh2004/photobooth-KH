@@ -2,17 +2,41 @@ import { LayoutConfig } from '../types';
 import { drawImageCover } from './drawImageCover';
 
 async function loadImage(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    // Nếu là URL bên ngoài (không phải data: URI), dùng proxy để bypass CORS policy
-    const proxyUrl = url.startsWith('http') 
-      ? `https://wsrv.nl/?url=${encodeURIComponent(url)}` 
-      : url;
-    img.src = proxyUrl;
-  });
+  const candidates = [url];
+  if (url.startsWith('http')) {
+    const frameUrl = new URL(url);
+    if (frameUrl.hostname === 'pub-4eb303709ef24609a3b420990203812a.r2.dev') {
+      candidates.unshift(`/r2-proxy${frameUrl.pathname}${frameUrl.search}`);
+    }
+    candidates.push(`https://wsrv.nl/?url=${encodeURIComponent(url)}`);
+  }
+
+  let lastError: unknown;
+  for (const candidate of [...new Set(candidates)]) {
+    try {
+      return await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        const timeout = window.setTimeout(() => {
+          img.src = '';
+          reject(new Error(`Timeout khi tải ảnh frame: ${candidate}`));
+        }, 15000);
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          window.clearTimeout(timeout);
+          resolve(img);
+        };
+        img.onerror = () => {
+          window.clearTimeout(timeout);
+          reject(new Error(`Không tải được ảnh frame: ${candidate}`));
+        };
+        img.src = candidate;
+      });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError ?? new Error('Không tải được ảnh frame');
 }
 
 export async function composeGroupPhoto(opts: {

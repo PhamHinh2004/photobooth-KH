@@ -15,6 +15,7 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { SessionType } from '../session-results/entities/session-result.entity';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -35,9 +36,14 @@ export class PostsController {
   @ApiOperation({ summary: 'Get feed' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'sessionType', required: false, enum: SessionType })
   @Get()
-  findFeed(@Query('page') page = 1, @Query('limit') limit = 10) {
-    return this.postsService.findFeed(+page, +limit);
+  findFeed(
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+    @Query('sessionType') sessionType?: SessionType,
+  ) {
+    return this.postsService.findFeed(+page, +limit, sessionType);
   }
 
   // lấy bài viết của chính mình 

@@ -4,9 +4,9 @@ const TABS = [
   { value: 'all', label: 'Tất cả' },
   { value: 'group', label: 'Chụp Nhóm' },
   { value: 'single', label: 'Chụp Đơn' },
-];
+] as const;
 
-export function FilterTabs({ active, onChange }: { active: string; onChange: (v: string) => void }) {
+export function FilterTabs({ active, onChange }: { active: 'all' | 'group' | 'single'; onChange: (v: 'all' | 'group' | 'single') => void }) {
   return (
     <div className="w-full">
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-4">

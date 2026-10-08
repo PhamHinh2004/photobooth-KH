@@ -27,6 +27,11 @@ export class RoomGateway implements OnGatewayConnection {
     }
   }
 
+  @SubscribeMessage('room:time_sync')
+  handleTimeSync() {
+    return { serverTime: Date.now() };
+  }
+
   @SubscribeMessage('room:join')
   handleJoinRoom(@MessageBody() roomId: string, @ConnectedSocket() client: Socket) {
     client.join(`room:${roomId}`);
@@ -42,18 +47,33 @@ export class RoomGateway implements OnGatewayConnection {
     this.server.to(`room:${payload.roomId}`).emit('room:participant_joined', payload.participant);
   }
 
+  @OnEvent('room.studio_opened')
+  onStudioOpened(payload: { roomId: string }) {
+    this.server.to(`room:${payload.roomId}`).emit('room:studio_opened', payload);
+  }
+
+  @OnEvent('room.edit_policy_updated')
+  onEditPolicyUpdated(payload: { roomId: string; policy: 'host_only' | 'all_participants' }) {
+    this.server.to(`room:${payload.roomId}`).emit('room:edit_policy_updated', payload);
+  }
+
   @OnEvent('room.countdown_started')
-  onCountdownStarted(payload: { roomId: string; countdownSeconds: number }) {
+  onCountdownStarted(payload: { roomId: string; countdownSeconds: number; countdownEndsAt: number; roundIndex: number; totalRounds: number }) {
     this.server.to(`room:${payload.roomId}`).emit('room:countdown_started', payload);
   }
 
+  @OnEvent('room.break_started')
+  onBreakStarted(payload: { roomId: string; breakEndsAt: number; roundIndex: number; totalRounds: number }) {
+    this.server.to(`room:${payload.roomId}`).emit('room:break_started', payload);
+  }
+
   @OnEvent('room.capture_trigger')
-  onCaptureTrigger(payload: { roomId: string; triggerAt: number }) {
+  onCaptureTrigger(payload: { roomId: string; triggerAt: number; roundIndex: number; totalRounds: number }) {
     this.server.to(`room:${payload.roomId}`).emit('room:capture_trigger', payload);
   }
 
   @OnEvent('room.participant_captured')
-  onParticipantCaptured(payload: { roomId: string; slotIndex: number }) {
+  onParticipantCaptured(payload: { roomId: string; slotIndex: number; roundIndex: number; totalRounds: number }) {
     this.server.to(`room:${payload.roomId}`).emit('room:participant_captured', payload);
   }
 

@@ -29,8 +29,9 @@ interface PostCardProps {
         image?: string | null;
       } | null;
     };
-    session?: { 
+    session?: {
       session_type?: string; 
+      room?: { name?: string | null; room_code?: string } | null;
       photo?: { 
         frame?: { 
           id: string;
@@ -130,6 +131,8 @@ export function PostCard({ post }: PostCardProps) {
   const fullName = post.account?.customer?.fullName || post.account?.customer?.full_name || post.account?.full_name || post.account?.username || 'Người dùng ẩn danh';
   const avatarUrl = post.account?.customer?.image || post.account?.avatarUrl || post.account?.avatar_url;
   const frameName = post.session?.photo?.frame?.name;
+  const isGroupCapture = post.session?.session_type === 'group';
+  const groupName = post.session?.room?.name || post.session?.room?.room_code;
   const commentTree = buildCommentTree(comments);
 
   const reloadComments = async () => {
@@ -173,11 +176,16 @@ export function PostCard({ post }: PostCardProps) {
               </div>
             </div>
           </div>
-          {post.session?.session_type && (
-            <span className="bg-pink-100 text-pink-600 text-[11px] font-bold px-2.5 py-1 rounded-full">
-              {post.session.session_type === 'group' ? 'Chụp Nhóm' : 'Chụp Đơn'}
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${isGroupCapture ? 'bg-pink-100 text-pink-700' : 'bg-sky-100 text-sky-700'}`}>
+              {isGroupCapture ? 'Chụp Nhóm' : 'Chụp Đơn'}
             </span>
-          )}
+            {isGroupCapture && (
+              <span className="max-w-32 truncate text-[11px] font-medium text-zinc-500" title={groupName || 'Phòng nhóm'}>
+                {groupName || 'Phòng nhóm'}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
