@@ -144,6 +144,16 @@ export class PostsService {
     return post;
   }
 
+  async findSharePreview(id: string) {
+    const post = await this.postRepository.findOne({
+      where: { id },
+      relations: { account: true },
+    });
+    if (!post) throw new NotFoundException('Post not found');
+
+    return post;
+  }
+
   async update(id: string, accountId: string, updatePostDto: UpdatePostDto) {
     const post = await this.postRepository.findOne({ where: { id } });
     if (!post) throw new NotFoundException('Post not found');
