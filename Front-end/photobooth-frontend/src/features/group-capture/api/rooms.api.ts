@@ -1,11 +1,19 @@
 import { Room } from '../types';
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth.store';
+import { API_BASE_URL } from '@/api/apiConfig';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+const API = API_BASE_URL;
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
+}
+
+export interface RoomResultPayload {
+  photo?: { processed_file_url?: string | null };
+  recording?: { file_url?: string | null };
+  gif?: { image_url?: string | null };
+  sessionResult?: { id: string };
 }
 
 function getToken() {
@@ -34,7 +42,7 @@ const json = (body: unknown): RequestInit => ({
 });
 
 export const roomsApi = {
-  create: (dto: { max_participants: number; countdown_seconds: number }) => req<Room>('/rooms', json(dto)),
+  create: (dto: { name?: string; max_participants: number; countdown_seconds: number }) => req<Room>('/rooms', json(dto)),
 
   selectFrame: (id: string, frameId: string) =>
     req(`/rooms/${id}/frame`, { ...json({ frameId }), method: 'PATCH' }),
@@ -45,13 +53,23 @@ export const roomsApi = {
 
   ready: (id: string) => req(`/rooms/${id}/participants/me/ready`, { method: 'PATCH' }),
 
+  openStudio: (id: string) => req(`/rooms/${id}/open-studio`, json({})),
+
+  setEditPolicy: (id: string, policy: 'host_only' | 'all_participants') =>
+    req<{ roomId: string; edit_policy: 'host_only' | 'all_participants' }>(`/rooms/${id}/edit-policy`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ policy }),
+    }),
+
   livekitToken: (id: string) => req<{ token: string; url: string }>(`/rooms/${id}/livekit-token`, json({})),
 
   startCountdown: (id: string) => req(`/rooms/${id}/start-countdown`, json({})),
 
-  uploadCapture: async (id: string, jpeg: Blob) => {
+  uploadCapture: async (id: string, jpeg: Blob, roundIndex: number) => {
     const f = new FormData();
     f.append('file', jpeg, 'capture.jpg');
+    f.append('roundIndex', String(roundIndex));
     const token = getToken();
     const res = await axios.post(`${API}/rooms/${id}/captures`, f, {
       headers: { Authorization: `Bearer ${token}` }
@@ -81,5 +99,5 @@ export const roomsApi = {
     return res.data;
   },
 
-  result: (id: string) => req(`/rooms/${id}/result`),
+  result: (id: string) => req<RoomResultPayload>(`/rooms/${id}/result`),
 };

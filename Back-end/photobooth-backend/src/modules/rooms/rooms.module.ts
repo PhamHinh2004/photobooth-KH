@@ -13,11 +13,13 @@ import { RoomCaptureStore } from './room-capture.store';
 import { StorageModule } from '../storage/storage.module';
 import { Photo } from '../photos/entities/photo.entity';
 import { SessionResult } from '../session-results/entities/session-result.entity';
+import { Frame } from '../frames/entities/frame.entity';
 import { RedisModule } from '../redis/redis.module';
+import { CustomersModule } from '../customers/customers.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Room, RoomParticipant, Photo, SessionResult]),
+    TypeOrmModule.forFeature([Room, RoomParticipant, Photo, SessionResult, Frame]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -26,6 +28,7 @@ import { RedisModule } from '../redis/redis.module';
       inject: [ConfigService],
     }),
     StorageModule,
+    CustomersModule,
     RedisModule,
   ],
   controllers: [RoomsController],

@@ -188,11 +188,12 @@ const ICON_STYLES: StyleDefinition[] = [
 interface FilterScreenProps {
   photos: string[]
   frame: Frame
+  precomposed?: boolean
   onBack: () => void
   onNext: (processedCanvas: HTMLCanvasElement, originalCanvas: HTMLCanvasElement, filter: FilterPreset, bgColor: string) => void
 }
 
-export default function FilterScreen({ photos, frame, onBack, onNext }: FilterScreenProps) {
+export default function FilterScreen({ photos, frame, precomposed = false, onBack, onNext }: FilterScreenProps) {
   const [selectedFilter, setSelectedFilter] = useState<FilterPreset>(FILTER_PRESETS[0])
   const [selectedEffect, setSelectedEffect] = useState<string>('none')
   const [effectOpacity, setEffectOpacity] = useState<number>(1)
@@ -456,6 +457,7 @@ export default function FilterScreen({ photos, frame, onBack, onNext }: FilterSc
             <PhotoComposer
               photos={photos}
               frame={frame}
+              precomposed={precomposed}
               filterPreset={selectedFilter}
               effect={EFFECTS.find(e => e.id === selectedEffect)}
               effectOpacity={effectOpacity}

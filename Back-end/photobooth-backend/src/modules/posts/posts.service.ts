@@ -4,7 +4,7 @@ import { Repository, DataSource, EntityManager } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Post } from './entities/post.entity';
 import { PostLike } from './entities/post-like.entity';
-import { SessionResult } from '../session-results/entities/session-result.entity';
+import { SessionResult, SessionType } from '../session-results/entities/session-result.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
@@ -46,7 +46,7 @@ export class PostsService {
 
       const postWithRelations = await manager.findOne(Post, {
         where: { id: saved.id },
-        relations: { account: true },
+        relations: { account: true, session: { photo: { frame: true }, room: true } },
       });
 
       this.eventEmitter.emit('post.created', postWithRelations);
@@ -98,13 +98,23 @@ export class PostsService {
     return updatedPost;
   }
 
-  async findFeed(page = 1, limit = 10) {
-    const [data, total] = await this.postRepository.findAndCount({
-      order: { created_at: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-      relations: { account: true },
-    });
+  async findFeed(page = 1, limit = 10, sessionType?: SessionType) {
+    const query = this.postRepository
+      .createQueryBuilder('post')
+      .leftJoinAndSelect('post.account', 'account')
+      .leftJoinAndSelect('post.session', 'session')
+      .leftJoinAndSelect('session.photo', 'photo')
+      .leftJoinAndSelect('photo.frame', 'frame')
+      .leftJoinAndSelect('session.room', 'room')
+      .orderBy('post.created_at', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (sessionType === SessionType.SINGLE || sessionType === SessionType.GROUP) {
+      query.andWhere('session.session_type = :sessionType', { sessionType });
+    }
+
+    const [data, total] = await query.getManyAndCount();
 
     return {
       data,
@@ -120,7 +130,7 @@ export class PostsService {
       order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
-      relations: { account: true },
+      relations: { account: true, session: { photo: { frame: true }, room: true } },
     });
 
     return {
@@ -134,7 +144,7 @@ export class PostsService {
   async findOne(id: string) {
     const post = await this.postRepository.findOne({
       where: { id },
-      relations: { account: true, session: { photo: { frame: true } } },
+      relations: { account: true, session: { photo: { frame: true }, room: true } },
     });
     if (!post) throw new NotFoundException('Post not found');
 

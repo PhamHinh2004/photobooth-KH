@@ -4,14 +4,39 @@ import type { PackageOption } from '@/types/capture.types'
 import frameOptions from '@/data/frame_options.json'
 
 export const PACKAGE_OPTIONS: PackageOption[] = frameOptions as PackageOption[]
+const customLayoutRows: Record<string, number[]> = {
+  '3x3': [3, 3, 3],
+  '5_3_2': [3, 2],
+  '5_2_3': [2, 3],
+  '7_4_3': [4, 3],
+  '7_3_4': [3, 4],
+}
 
 interface PackageSelectorProps {
   onSelectPackage: (option: PackageOption) => void
+  options?: PackageOption[]
+  initialSelectedId?: string
+  heading?: string
+  description?: string
+  eyebrow?: string
+  backLabel?: string
+  continueLabel?: string
+  onBack?: () => void
 }
 
-export default function PackageSelector({ onSelectPackage }: PackageSelectorProps) {
+export default function PackageSelector({
+  onSelectPackage,
+  options = PACKAGE_OPTIONS,
+  initialSelectedId,
+  heading,
+  description,
+  eyebrow = 'SOLO PHOTOBOOTH EXPERIENCE',
+  backLabel = 'Quay lại Trang Chủ',
+  continueLabel = 'Tiếp Tục: Chọn Style (Bước 2)',
+  onBack,
+}: PackageSelectorProps) {
   const navigate = useNavigate()
-  const [selectedId, setSelectedId] = useState<string>(PACKAGE_OPTIONS[0].id)
+  const [selectedId, setSelectedId] = useState<string>(initialSelectedId || options[0].id)
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
 
@@ -22,7 +47,7 @@ export default function PackageSelector({ onSelectPackage }: PackageSelectorProp
     { key: 'large', label: 'Khung Lớn (8 ảnh)' },
   ]
 
-  const filteredPackages = PACKAGE_OPTIONS.filter((p) => {
+  const filteredPackages = options.filter((p) => {
     const matchesCategory = activeCategory === 'all' || p.category === activeCategory
     const query = searchQuery.trim().toLowerCase()
     const matchesSearch =
@@ -34,7 +59,7 @@ export default function PackageSelector({ onSelectPackage }: PackageSelectorProp
     return matchesCategory && matchesSearch
   })
 
-  const selectedoption = PACKAGE_OPTIONS.find((p) => p.id === selectedId) || PACKAGE_OPTIONS[0]
+  const selectedoption = options.find((p) => p.id === selectedId) || options[0]
 
   const getOrientationLabel = (option: PackageOption) => {
     if ((option as any).orientation === 'vertical' || option.id === '1x4' || option.id === '2x3' || option.id === '2x4') {
@@ -52,15 +77,15 @@ export default function PackageSelector({ onSelectPackage }: PackageSelectorProp
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-fuchsia-50 border border-fuchsia-200/60 text-[#c026d3] text-xs font-bold uppercase tracking-wider mb-2">
-            <span className="text-[#FF00FF]">✦</span> SOLO PHOTOBOOTH EXPERIENCE
+            <span className="text-[#FF00FF]">✦</span> {eyebrow}
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-2">
             <span className="bg-gradient-to-r from-[#d946ef] via-[#9333ea] to-[#2563eb] bg-clip-text text-transparent">
-              Bước 1: Chọn Kích Thước Frame
+              {heading || 'Bước 1: Chọn Kích Thước Frame'}
             </span>
           </h1>
           <p className="text-gray-500 text-xs md:text-sm max-w-xl leading-relaxed">
-            Tìm kiếm và lựa chọn mẫu bố cục khung hình phù hợp cho buổi chụp đơn của bạn. Hỗ trợ xuất ảnh in Kiosk tự động &amp; video Motion Live Y2K.
+            {description || 'Tìm kiếm và lựa chọn mẫu bố cục khung hình phù hợp cho buổi chụp đơn của bạn. Hỗ trợ xuất ảnh in Kiosk tự động &amp; video Motion Live Y2K.'}
           </p>
         </div>
 
@@ -108,7 +133,7 @@ export default function PackageSelector({ onSelectPackage }: PackageSelectorProp
         {/* Left 7 cols: Package Cards */}
         <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {filteredPackages.map((option) => {
-            const isSelected = option.id === selectedId
+            const isSelected = option.id === selectedoption.id
             const isPopular = (option as any).isPopular || option.id === '2x2' || option.id === '1x4'
             const orientationText = getOrientationLabel(option)
 
@@ -155,7 +180,21 @@ export default function PackageSelector({ onSelectPackage }: PackageSelectorProp
 
                 {/* Card Layout Miniature Preview */}
                 <div className="bg-[#f0f0f2] rounded-xl p-3 mb-4 flex items-center justify-center min-h-[90px]">
-                  {option.id === '1x4' ? (
+                  {customLayoutRows[option.id] ? (
+                    <div className="flex h-14 w-24 flex-col justify-center gap-1">
+                      {customLayoutRows[option.id].map((slotsInRow, rowIndex) => (
+                        <div
+                          key={rowIndex}
+                          className="grid flex-1 gap-1"
+                          style={{ gridTemplateColumns: `repeat(${slotsInRow}, minmax(0, 1fr))`, width: `${(slotsInRow / Math.max(...customLayoutRows[option.id])) * 100}%`, marginInline: 'auto' }}
+                        >
+                          {Array.from({ length: slotsInRow }).map((_, slotIndex) => (
+                            <div key={slotIndex} className="aspect-square rounded-xs bg-gray-400/70" />
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ) : option.id === '1x4' ? (
                     <div className="flex flex-col gap-1 w-10">
                       <div className="w-full h-3.5 bg-gray-400/70 rounded-xs" />
                       <div className="w-full h-3.5 bg-gray-400/70 rounded-xs" />
@@ -285,6 +324,22 @@ export default function PackageSelector({ onSelectPackage }: PackageSelectorProp
                     </div>
                   )
                 default:
+                  if (customLayoutRows[selectedoption.id]) {
+                    let slotIndex = 0
+                    return (
+                      <div className="flex w-full flex-col gap-1.5">
+                        {customLayoutRows[selectedoption.id].map((slotsInRow, rowIndex) => (
+                          <div
+                            key={rowIndex}
+                            className="grid gap-1.5"
+                            style={{ gridTemplateColumns: `repeat(${slotsInRow}, minmax(0, 1fr))`, width: `${(slotsInRow / Math.max(...customLayoutRows[selectedoption.id])) * 100}%`, marginInline: 'auto' }}
+                          >
+                            {Array.from({ length: slotsInRow }, () => renderSlot(slotIndex++, 'aspect-square'))}
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  }
                   return null
               }
             })()}
@@ -308,11 +363,11 @@ export default function PackageSelector({ onSelectPackage }: PackageSelectorProp
         <div className="bg-white/95 backdrop-blur-md rounded-full px-5 py-3 shadow-[0_12px_35px_rgba(0,0,0,0.12)] border border-[#E5E4E2] flex items-center justify-between gap-3 md:gap-6">
           {/* Left: Back to Home button */}
           <button
-            onClick={() => navigate('/')}
+            onClick={onBack || (() => navigate('/'))}
             className="px-4 md:px-5 py-2.5 rounded-full bg-[#f4f4f5] hover:bg-[#e4e4e7] text-gray-700 text-xs md:text-sm font-semibold flex items-center gap-2 transition-all flex-shrink-0 cursor-pointer"
           >
             <span>←</span>
-            <span>Quay lại Trang Chủ</span>
+            <span>{backLabel}</span>
           </button>
 
           {/* Center: Selected package info */}
@@ -342,7 +397,7 @@ export default function PackageSelector({ onSelectPackage }: PackageSelectorProp
             onClick={() => onSelectPackage(selectedoption)}
             className="px-6 md:px-8 py-3 rounded-full bg-gradient-to-r from-[#d946ef] via-[#a855f7] to-[#4f86a8] hover:opacity-95 text-white font-bold text-xs md:text-sm shadow-[0_4px_20px_rgba(217,70,239,0.35)] hover:shadow-[0_6px_25px_rgba(217,70,239,0.5)] transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2 whitespace-nowrap flex-shrink-0 cursor-pointer"
           >
-            <span>Tiếp Tục: Chọn Style (Bước 2)</span>
+            <span>{continueLabel}</span>
             <span className="text-base">→</span>
           </button>
         </div>

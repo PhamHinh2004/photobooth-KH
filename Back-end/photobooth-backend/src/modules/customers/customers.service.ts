@@ -250,6 +250,13 @@ export class CustomersService {
     return this.photoSessionRepository.save(photo);
   }
 
+  async ensurePhotoSession(accountId: string, dto: CreatePhotoSessionDto) {
+    const existing = await this.photoSessionRepository.findOne({
+      where: { accountId, sessionType: dto.sessionType, imageUrl: dto.imageUrl },
+    });
+    return existing ?? this.savePhotoSession(accountId, dto);
+  }
+
   async remove(id: string): Promise<{ message: string }> {
     const customer = await this.findOne(id);
     await this.customerRepository.remove(customer);

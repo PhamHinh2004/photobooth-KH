@@ -17,6 +17,7 @@ import PostDetailPage from '../pages/social/PostDetailPage'
 import MyPostsPage from '../pages/social/MyPostsPage'
 import PublicLayout from '../components/layouts/PublicLayout'
 import GroupSetupPage from '../features/group-capture/pages/GroupSetupPage'
+import GroupSizePage from '../features/group-capture/pages/GroupSizePage'
 import GroupFramePage from '../features/group-capture/pages/GroupFramePage'
 import GroupJoinPage from '../features/group-capture/pages/GroupJoinPage'
 import GroupLobbyPage from '../features/group-capture/pages/GroupLobbyPage'
@@ -113,6 +114,10 @@ const routes: RouteObject[] = [
   {
     path: '/group/new',
     element: <PublicLayout><GroupSetupPage /></PublicLayout>,
+  },
+  {
+    path: '/group/new/size',
+    element: <PublicLayout><GroupSizePage /></PublicLayout>,
   },
   {
     path: '/group/new/frame',

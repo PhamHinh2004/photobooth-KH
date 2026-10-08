@@ -10,7 +10,7 @@ import { Spin } from 'antd';
 export default function FeedPage() {
   const token = useAuthStore((state) => state.token);
   const { feed, setFeed, isConnected } = useSocialSocket(token || undefined);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'group' | 'single'>('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,7 +19,7 @@ export default function FeedPage() {
         setLoading(true);
         // We fetch the first page.
         // In real app, we handle pagination (load more) and map filter tab
-        const data = await socialApi.getFeed(1, 20);
+        const data = await socialApi.getFeed(1, 20, activeTab === 'all' ? undefined : activeTab);
         setFeed(data.data || []);
       } catch (error) {
         console.error('Failed to load feed', error);

@@ -21,6 +21,7 @@ type MemoryItem = {
   title: string | null
   createdAt: string
   source: 'history' | 'post'
+  isPosted: boolean
 }
 
 const provinceApiUrl = 'https://provinces.open-api.vn/api/?depth=1'
@@ -71,7 +72,7 @@ const ProfilePage = () => {
         // Lấy cả 2 nguồn dữ liệu song song
         const [histResult, postsResult] = await Promise.allSettled([
           authApi.getMyPhotoHistory({ type: filter === 'all' ? undefined : filter, order: sort }),
-          filter === 'group' ? Promise.resolve(null) : socialApi.getMyPosts(1, 100),
+          socialApi.getMyPosts(1, 100),
         ])
 
         // Ảnh từ photo_sessions (lần chụp mới)
@@ -83,6 +84,7 @@ const ProfilePage = () => {
               title: s.title,
               createdAt: typeof s.createdAt === 'string' ? s.createdAt : new Date(s.createdAt).toISOString(),
               source: 'history' as const,
+              isPosted: false,
             }))
           : []
 
@@ -95,16 +97,23 @@ const ProfilePage = () => {
               title: p.session?.photo?.frame?.name || p.caption || null,
               createdAt: p.created_at,
               source: 'post' as const,
-            }))
+              isPosted: p.status === 'published',
+            })).filter((item: MemoryItem) => filter === 'all' || item.sessionType === filter)
           : []
 
         // Hợp nhất, loại bỏ trùng lặp theo imageUrl, sắp xếp theo ngày
-        const usedUrls = new Set<string>()
+        const itemsByUrl = new Map<string, MemoryItem>()
         const merged: MemoryItem[] = []
 
         for (const item of [...sessionItems, ...postItems]) {
-          if (!item.imageUrl || usedUrls.has(item.imageUrl)) continue
-          usedUrls.add(item.imageUrl)
+          if (!item.imageUrl) continue
+          const existing = itemsByUrl.get(item.imageUrl)
+          if (existing) {
+            existing.isPosted ||= item.isPosted
+            if (!existing.title) existing.title = item.title
+            continue
+          }
+          itemsByUrl.set(item.imageUrl, item)
           merged.push(item)
         }
 
@@ -272,9 +281,7 @@ const ProfilePage = () => {
                           <span className={`photo-type-badge ${photo.sessionType}`}>
                             {photo.sessionType === 'solo' ? '👤 Solo' : '👥 Nhóm'}
                           </span>
-                          {photo.source === 'post' && (
-                            <span className="photo-source-badge">📢 Đã đăng</span>
-                          )}
+                          <span className="photo-source-badge">{photo.isPosted ? 'Đã đăng' : 'Chỉ lưu'}</span>
                           <button
                             className="photo-view-btn"
                             onClick={() => window.open(photo.imageUrl, '_blank')}
