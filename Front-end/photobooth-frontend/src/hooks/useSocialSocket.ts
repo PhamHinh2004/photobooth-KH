@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { attachCustomerProfiles } from '../api/social.api';
-
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+import { API_SOCKET_ORIGIN } from '@/api/apiConfig';
 
 let socket: Socket | null = null;
 
@@ -13,7 +12,7 @@ export const useSocialSocket = (token?: string) => {
 
   useEffect(() => {
     if (!socket) {
-      socket = io(`${SOCKET_URL}/social`, {
+      socket = io(`${API_SOCKET_ORIGIN}/social`, {
         transports: ['websocket'],
         auth: { token },
       });

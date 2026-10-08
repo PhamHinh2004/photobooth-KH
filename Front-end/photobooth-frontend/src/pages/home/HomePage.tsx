@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { message } from 'antd'
+import { message, Modal } from 'antd'
 import { useAuthStore } from '@/stores/auth.store'
 import PublicLayout from '@/components/layouts/PublicLayout'
 import './HomePage.css'
@@ -9,6 +9,7 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuthStore()
   const [sessionCode, setSessionCode] = useState('')
+  const [isModeChooserOpen, setIsModeChooserOpen] = useState(false)
 
   const handleJoinSession = (event?: React.FormEvent) => {
     event?.preventDefault()
@@ -21,7 +22,18 @@ const HomePage: React.FC = () => {
     navigate(isAuthenticated ? `/group/join/${code}` : `/login?redirect=/group/join/${code}`)
   }
 
-  const handleStartShooting = () => navigate(isAuthenticated ? '/capture' : '/login')
+  const handleStartShooting = () => {
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
+    }
+    setIsModeChooserOpen(true)
+  }
+
+  const handleSelectCaptureMode = (mode: 'solo' | 'group') => {
+    setIsModeChooserOpen(false)
+    navigate(mode === 'solo' ? '/capture' : '/group/new')
+  }
 
   const photos = [
     'https://lh3.googleusercontent.com/aida-public/AB6AXuDwv1jhAhnycjTXdsehFjfc43uj9HbsutmtAvbrmdNxQEqrWCb6X-lYlqiUMR6BPkUUJBxFo2w3JEcekYJNUwHXdGtiv21WZNiMUgqhA38AbAVL4kHOH3XRYwkbKhRGia3sGTYMLmlQMB5YAXNG9UBZxQp8tWnQBOhgOxRaAOmQHTWaETml1yPBxi4zA9ABG0MRTCtJy8mC7w26UAn6TTFDj4_JA79RRoVL_2T8pDPQSMEhX_XaaWAoMg',
@@ -33,6 +45,41 @@ const HomePage: React.FC = () => {
 
   return (
     <PublicLayout>
+      <Modal
+        open={isModeChooserOpen}
+        onCancel={() => setIsModeChooserOpen(false)}
+        footer={null}
+        centered
+        width={620}
+        title={<span className="font-headline-lg-mobile text-xl">Bạn muốn chụp như thế nào?</span>}
+      >
+        <p className="mb-5 text-sm text-on-surface-variant">Chọn cách bắt đầu buổi chụp của bạn.</p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => handleSelectCaptureMode('solo')}
+            className="group flex min-h-40 flex-col items-start justify-between rounded-xl border border-sky-200 bg-sky-50 p-5 text-left transition hover:border-sky-400 hover:bg-sky-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500"
+          >
+            <span className="material-symbols-outlined text-3xl text-sky-700">photo_camera</span>
+            <span>
+              <span className="block text-lg font-semibold text-slate-900">Chụp đơn</span>
+              <span className="mt-1 block text-sm text-slate-600">Tự chọn khung và phong cách ảnh.</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSelectCaptureMode('group')}
+            className="group flex min-h-40 flex-col items-start justify-between rounded-xl border border-pink-200 bg-pink-50 p-5 text-left transition hover:border-pink-400 hover:bg-pink-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-500"
+          >
+            <span className="material-symbols-outlined text-3xl text-pink-700">groups</span>
+            <span>
+              <span className="block text-lg font-semibold text-slate-900">Chụp nhóm</span>
+              <span className="mt-1 block text-sm text-slate-600">Tạo phòng và mời mọi người tham gia.</span>
+            </span>
+          </button>
+        </div>
+      </Modal>
+
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <span className="material-symbols-outlined absolute top-[20%] left-[10%] text-secondary/50" style={{ fontSize: '48px', fontVariationSettings: "'FILL' 1" }}>flare</span>
         <span className="material-symbols-outlined absolute top-[60%] right-[15%] text-primary-fixed-dim/60" style={{ fontSize: '64px', fontVariationSettings: "'FILL' 1" }}>flare</span>

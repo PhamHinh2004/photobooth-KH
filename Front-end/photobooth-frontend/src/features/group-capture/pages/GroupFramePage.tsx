@@ -2,45 +2,56 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGroupCaptureStore } from '../store/roomStore';
 import { roomsApi } from '../api/rooms.api';
-import { Button, Typography, message, Spin } from 'antd';
+import { Button, Typography, message, Spin, Empty } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
-import { getFrames } from '@/api/capture.api';
+import { getFramesByAspectRatio } from '@/api/capture.api';
 import type { Frame } from '@/types/capture.types';
+import GroupCaptureProgress from '../components/GroupCaptureProgress';
+import { getGroupFrameLayouts } from '../groupFrameLayouts';
 
 const { Title, Text } = Typography;
 
 export default function GroupFramePage() {
   const navigate = useNavigate();
-  const { draft, selectedFrameId, setSelectedFrameId, setCurrentRoom } = useGroupCaptureStore();
+  const { draft, selectedLayoutId, selectedFrameId, setSelectedFrameId, setCurrentRoom } = useGroupCaptureStore();
   const [isCreating, setIsCreating] = useState(false);
   const [availableFrames, setAvailableFrames] = useState<Frame[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const selectedLayout = getGroupFrameLayouts(draft.maxParticipants).find((layout) => layout.id === selectedLayoutId);
 
   useEffect(() => {
+    const layoutId = selectedLayoutId;
+    if (!layoutId) {
+      navigate('/group/new/size', { replace: true });
+      return;
+    }
+
+    let isCurrent = true;
     async function loadFrames() {
       setIsLoading(true);
+      setAvailableFrames([]);
       try {
-        const allFrames = (await getFrames()) as any[];
-        const filtered = allFrames.filter(frame => 
-          (frame.session_type_supported === 'both' || frame.session_type_supported === 'group') &&
-          (!frame.supported_group_sizes || frame.supported_group_sizes.includes(draft.maxParticipants))
-        );
-        const finalFrames = filtered.length > 0 ? filtered : allFrames.filter(f => f.session_type_supported === 'both' || f.session_type_supported === 'group');
-        setAvailableFrames(finalFrames);
-        if (finalFrames.length > 0 && !finalFrames.find(f => f.id === selectedFrameId)) {
-          setSelectedFrameId(finalFrames[0].id);
+        const frames = await getFramesByAspectRatio(layoutId!);
+        if (!isCurrent) return;
+        const groupFrames = frames.filter((frame) => frame.session_type_supported === 'both' || frame.session_type_supported === 'group');
+        setAvailableFrames(groupFrames);
+        if (!groupFrames.some((frame) => frame.id === selectedFrameId)) {
+          setSelectedFrameId(groupFrames[0]?.id ?? null);
         }
       } catch (error) {
-        message.error('Lỗi tải danh sách khung hình từ máy chủ');
+        if (isCurrent) message.error('Lỗi tải danh sách style cho kích thước frame này');
       } finally {
-        setIsLoading(false);
+        if (isCurrent) setIsLoading(false);
       }
     }
     loadFrames();
-  }, [draft.maxParticipants]);
+    return () => {
+      isCurrent = false;
+    };
+  }, [draft.maxParticipants, navigate, selectedFrameId, selectedLayoutId, setSelectedFrameId]);
 
   const handleCreateRoom = async () => {
-    if (!selectedFrameId) {
+    if (!selectedLayoutId || !selectedFrameId) {
       message.error('Vui lòng chọn một khung hình');
       return;
     }
@@ -49,6 +60,7 @@ export default function GroupFramePage() {
       setIsCreating(true);
       // 1. Create Room
       const room = await roomsApi.create({
+        name: draft.name.trim() || 'Phòng nhóm',
         max_participants: draft.maxParticipants,
         countdown_seconds: 5 // Default for MVP
       });
@@ -67,68 +79,85 @@ export default function GroupFramePage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-8">
-      <div className="text-center mb-8">
-        <Title level={2} className="!mb-2">Bước 2: Gợi Ý Khung Hình & Chọn Style</Title>
-        <Text type="secondary">
-          Dành riêng cho nhóm {draft.maxParticipants} người: Thuật toán bố cục tự động đề xuất tỷ lệ chuẩn nhất, tối ưu hiển thị.
-        </Text>
-      </div>
+    <main className="mx-auto w-full max-w-[1220px] px-4 pb-32 pt-5 md:px-8 md:pt-8">
+      <GroupCaptureProgress activeStep={2} />
+      <header className="mb-7 text-center">
+        <Title level={2} className="!mb-2">Bước 3: Chọn style frame</Title>
+        <Text type="secondary">Style dành cho {selectedLayout?.title ?? selectedLayoutId} · nhóm {draft.maxParticipants} người</Text>
+      </header>
 
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
-        <Title level={4} className="mb-4">Phần 1: Lựa Chọn Bố Cục Khung</Title>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {availableFrames.map(frame => (
-            <div 
-              key={frame.id}
-              onClick={() => setSelectedFrameId(frame.id)}
-              className={`cursor-pointer rounded-xl border-2 transition-all p-4 flex flex-col items-center
-                ${selectedFrameId === frame.id ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-gray-200 hover:border-pink-300'}
-              `}
-            >
-              <div className="font-bold mb-2 text-center">{frame.name || `Khung ${frame.id.substring(0, 8)}`}</div>
-              <div className="text-xs text-gray-500 mb-4">{frame.layout_config.slots.length} Slot</div>
-              
-              {/* Frame Preview Image Container */}
-              <div className={`w-full flex items-center justify-center min-h-[220px] aspect-[4/3] relative overflow-hidden mb-2 rounded-xl ${selectedFrameId === frame.id ? 'bg-white/80' : 'bg-gray-50'}`}>
-                <img
-                  src={frame.image_url || frame.thumbnail_url}
-                  alt={frame.name}
-                  className="max-h-full max-w-full object-contain drop-shadow-md rounded-sm transition-transform duration-300 hover:scale-105"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = frame.thumbnail_url || frame.image_url || '';
-                  }}
-                />
-              </div>
-            </div>
-          ))}
+      {isLoading ? (
+        <div className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-2xl bg-white/80">
+          <Spin size="large" />
+          <Text type="secondary">Đang tải style frame...</Text>
         </div>
-      </div>
-      
-      {/* Footer sticky bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-4 z-50">
-        <div className="max-w-5xl mx-auto flex justify-between items-center">
-          <div>
-            <Text type="secondary" className="block text-xs uppercase tracking-wide">Cấu hình đã chọn:</Text>
-            <Text strong>Nhóm {draft.maxParticipants} người • Khung {selectedFrameId}</Text>
+      ) : availableFrames.length === 0 ? (
+        <div className="rounded-2xl border border-white bg-white/85 py-12 shadow-sm">
+          <Empty description={`Chưa có style cho kích thước ${selectedLayoutId}. Hãy quay lại chọn kích thước khác.`}>
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/group/new/size')}>Quay lại chọn kích thước</Button>
+          </Empty>
+        </div>
+      ) : (
+        <section className="rounded-2xl border border-white bg-white/85 p-4 shadow-sm md:p-6">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Chọn họa tiết khung</h2>
+              <p className="mt-1 text-sm text-slate-500">{availableFrames.length} style phù hợp với kích thước đã chọn</p>
+            </div>
+            <span className="rounded-full bg-fuchsia-50 px-3 py-1 text-xs font-semibold text-fuchsia-700">{selectedLayout?.slotsCount} ảnh / frame</span>
           </div>
-          <div className="flex gap-4">
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/group/new')}>
-              Quay lại Bước 1
-            </Button>
-            <Button 
-              type="primary" 
-              size="large" 
-              className="bg-teal-600 hover:bg-teal-700 min-w-[200px]"
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {availableFrames.map((frame) => {
+              const isSelected = selectedFrameId === frame.id;
+              return (
+                <button
+                  key={frame.id}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => setSelectedFrameId(frame.id)}
+                  className={`rounded-2xl border-2 p-3 text-left transition ${isSelected ? 'border-fuchsia-500 bg-fuchsia-50 shadow-md' : 'border-slate-200 bg-white hover:border-sky-300'}`}
+                >
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <span className="truncate text-sm font-bold text-slate-900">{frame.name || `Style ${frame.id.slice(0, 8)}`}</span>
+                    <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${isSelected ? 'bg-fuchsia-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                      {isSelected ? 'ĐANG CHỌN' : `${frame.layout_config?.slots?.length ?? selectedLayout?.slotsCount ?? 0} ô`}
+                    </span>
+                  </div>
+                  <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-slate-100 p-3">
+                    <img
+                      src={frame.image_url || frame.thumbnail_url}
+                      alt={frame.name}
+                      className="max-h-full max-w-full rounded object-contain"
+                    />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-4px_18px_rgba(0,0,0,0.08)] backdrop-blur md:p-4">
+        <div className="mx-auto flex max-w-[1220px] flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <Text type="secondary" className="block text-[10px] uppercase tracking-wide">Đang thiết lập</Text>
+            <Text strong className="block truncate">Nhóm {draft.maxParticipants} người · {selectedLayout?.title ?? selectedLayoutId}</Text>
+          </div>
+          <div className="flex w-full flex-row-reverse gap-2 sm:w-auto sm:flex-row sm:gap-3">
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/group/new/size')}>Đổi kích thước</Button>
+            <Button
+              type="primary"
+              size="large"
+              className="!bg-teal-700 hover:!bg-teal-800"
               onClick={handleCreateRoom}
-              disabled={!selectedFrameId || isCreating}
+              disabled={!selectedFrameId || isLoading || availableFrames.length === 0 || isCreating}
             >
               {isCreating ? <Spin size="small" className="mr-2" /> : null}
-              KHỞI TẠO PHÒNG CHỤP
+              XÁC NHẬN STYLE & TẠO PHÒNG
             </Button>
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

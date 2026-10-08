@@ -7,6 +7,7 @@ import baseFramesData from "@/data/base_frames.json"
 interface PhotoComposerProps {
   photos: string[]
   frame: Frame
+  precomposed?: boolean
   filterPreset?: FilterPreset | null
   effect?: PhotoEffect | null
   effectOpacity?: number
@@ -74,6 +75,7 @@ function loadImageFromUrl(url: string): Promise<HTMLImageElement> {
 export default function PhotoComposer({
   photos,
   frame,
+  precomposed = false,
   filterPreset,
   effect,
   effectOpacity = 1,
@@ -132,9 +134,10 @@ export default function PhotoComposer({
         }
 
         slots.forEach((slot: LayoutSlot, i: number) => {
-          const img = readyPhotos[i]
-          if (!img) return
-          drawImageCover(originalCtx, img, slot)
+          const img = readyPhotos[precomposed ? 0 : i]
+          if (!img || (precomposed && i > 0)) return
+          if (precomposed) originalCtx.drawImage(img, 0, 0, canvas_width, canvas_height)
+          else drawImageCover(originalCtx, img, slot)
         })
 
         // Reset filter for frame draw
@@ -152,15 +155,16 @@ export default function PhotoComposer({
 
         // 2. Draw photos into slots
         slots.forEach((slot: LayoutSlot, i: number) => {
-          const img = readyPhotos[i]
-          if (!img) return
+          const img = readyPhotos[precomposed ? 0 : i]
+          if (!img || (precomposed && i > 0)) return
           processedCtx.save()
 
           if (filterPreset && filterPreset.cssFilter !== 'none') {
             processedCtx.filter = filterPreset.cssFilter
           }
 
-          drawImageCover(processedCtx, img, slot)
+          if (precomposed) processedCtx.drawImage(img, 0, 0, canvas_width, canvas_height)
+          else drawImageCover(processedCtx, img, slot)
           processedCtx.restore()
         })
 

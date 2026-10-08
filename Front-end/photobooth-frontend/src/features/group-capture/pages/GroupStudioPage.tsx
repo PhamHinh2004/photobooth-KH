@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGroupCaptureStore } from '../store/roomStore';
-import { connectRoomSocket } from '../realtime/roomSocket';
+import { connectRoomSocket, syncServerClock } from '../realtime/roomSocket';
 import { joinLivekit } from '../media/useLiveKitRoom';
 import { grabJpeg } from '../media/grabJpeg';
 import { composeGroupPhoto } from '../compose/composeGroupPhoto';
@@ -16,15 +16,27 @@ import { LiveKitRoom, GridLayout, ParticipantTile, useTracks } from '@livekit/co
 import '@livekit/components-styles';
 import axios from 'axios';
 import gifshot from 'gifshot';
+import { API_BASE_URL } from '@/api/apiConfig';
+import FilterScreen from '@/components/capture/step5/FilterScreen';
 
 const { Title, Text } = Typography;
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+const API = API_BASE_URL;
 
-function StudioStage() {
+function StudioStage({ onCameraCountChange }: { onCameraCountChange: (count: number) => void }) {
   const tracks = useTracks(
     [{ source: Track.Source.Camera, withPlaceholder: true }],
     { onlySubscribed: false }
   );
+
+  useEffect(() => {
+    const cameraParticipants = new Set(
+      tracks
+        .filter((track) => Boolean(track.publication?.track))
+        .map((track) => track.participant.identity),
+    );
+    onCameraCountChange(cameraParticipants.size);
+  }, [tracks, onCameraCountChange]);
+
   return (
     <div className="w-full h-full">
       <GridLayout tracks={tracks}>
@@ -52,6 +64,19 @@ function drawGrid(ctx: CanvasRenderingContext2D, videos: HTMLVideoElement[], wid
   });
 }
 
+interface GroupPostProduction {
+  photoUrl: string;
+  frame: Frame;
+  recordingId?: string;
+  gifId?: string;
+}
+
+function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Không xuất được ảnh hậu kỳ')), 'image/png');
+  });
+}
+
 export default function GroupStudioPage() {
   const { code } = useParams();
   const navigate = useNavigate();
@@ -59,13 +84,26 @@ export default function GroupStudioPage() {
   const { user } = useAuthStore();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
-  const [phase, setPhase] = useState<'idle' | 'composing'>('idle');
-  const [capturedCount, setCapturedCount] = useState(0);
+  const [breakCountdown, setBreakCountdown] = useState<number | null>(null);
+  const [roundIndex, setRoundIndex] = useState(0);
+  const [totalRounds, setTotalRounds] = useState(1);
+  const [captureSequenceStarted, setCaptureSequenceStarted] = useState(false);
+  const [phase, setPhase] = useState<'idle' | 'composing' | 'editing'>('idle');
+  const [postProduction, setPostProduction] = useState<GroupPostProduction | null>(null);
+  const [capturedSlots, setCapturedSlots] = useState<Set<number>>(() => new Set());
+  const capturedCount = capturedSlots.size;
   const [frameDetails, setFrameDetails] = useState<Frame | null>(null);
   const [livekitRoomObj, setLivekitRoomObj] = useState<LiveKitRoomObj | null>(null);
+  const [connectedCameraCount, setConnectedCameraCount] = useState(0);
+  const [flash, setFlash] = useState(false);
   
   const isHost = currentRoom?.host_account_id === String(user?.id);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (!postProduction?.photoUrl) return;
+    return () => URL.revokeObjectURL(postProduction.photoUrl);
+  }, [postProduction?.photoUrl]);
   
   // Recording refs
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -104,10 +142,17 @@ export default function GroupStudioPage() {
         return;
       }
       setSocket(sk);
+      const serverTimeOffset = await syncServerClock(sk);
+      if (isCancelled) return;
+      const getServerNow = () => Date.now() + serverTimeOffset;
 
-      sk.on('room:countdown_started', ({ countdownSeconds }: { countdownSeconds: number }) => {
-        let c = countdownSeconds;
-        if (!isCancelled) setCountdown(c);
+      sk.on('room:countdown_started', ({ countdownEndsAt, roundIndex: activeRound, totalRounds: rounds }: { countdownEndsAt: number; roundIndex: number; totalRounds: number }) => {
+        if (!isCancelled) {
+          setBreakCountdown(null);
+          setRoundIndex(activeRound);
+          setTotalRounds(rounds);
+          setCaptureSequenceStarted(true);
+        }
         
         // Bắt đầu ghi hình lưới video
         if (isHost && canvasRef.current && !isRecording.current) {
@@ -140,27 +185,41 @@ export default function GroupStudioPage() {
         }
 
         const timer = setInterval(() => {
-          c -= 1;
-          if (!isCancelled) {
-            if (c > 0) setCountdown(c);
-            else {
-              clearInterval(timer);
-              setCountdown(null);
-            }
-          } else {
-             clearInterval(timer);
+          if (isCancelled) {
+            clearInterval(timer);
+            return;
           }
-        }, 1000);
+          const remaining = Math.ceil((countdownEndsAt - getServerNow()) / 1000);
+          setCountdown(remaining > 0 ? remaining : null);
+          if (remaining <= 0) clearInterval(timer);
+        }, 100);
+        const remaining = Math.ceil((countdownEndsAt - getServerNow()) / 1000);
+        setCountdown(remaining > 0 ? remaining : null);
       });
 
-      sk.on('room:capture_trigger', ({ triggerAt }: { triggerAt: number }) => {
-        const wait = Math.max(0, triggerAt - Date.now());
+      sk.on('room:break_started', ({ breakEndsAt }: { breakEndsAt: number }) => {
+        setCountdown(null);
+        const updateBreakCountdown = () => {
+          const remaining = Math.ceil((breakEndsAt - getServerNow()) / 1000);
+          setBreakCountdown(remaining > 0 ? remaining : null);
+          if (remaining <= 0) clearInterval(timer);
+        };
+        const timer = setInterval(updateBreakCountdown, 100);
+        updateBreakCountdown();
+      });
+
+      sk.on('room:capture_trigger', ({ triggerAt, roundIndex: activeRound, totalRounds: rounds }: { triggerAt: number; roundIndex: number; totalRounds: number }) => {
+        const wait = Math.max(0, triggerAt - getServerNow());
         
         setTimeout(async () => {
           if (isCancelled) return;
+          setCountdown(null);
+          setBreakCountdown(null);
+          setFlash(true);
+          setTimeout(() => setFlash(false), 220);
           
-          // Dừng ghi hình
-          if (isHost) {
+          // Keep the shared recording alive until the final round.
+          if (isHost && activeRound === rounds - 1) {
             if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
               mediaRecorderRef.current.stop();
             }
@@ -175,7 +234,7 @@ export default function GroupStudioPage() {
             for (let i = 0; i < 2; i++) {
               if (isCancelled) break;
               try {
-                await roomsApi.uploadCapture(currentRoom.id, jpeg);
+                await roomsApi.uploadCapture(currentRoom.id, jpeg, activeRound);
                 success = true;
                 break;
               } catch (e) {
@@ -193,12 +252,15 @@ export default function GroupStudioPage() {
         }, wait);
       });
 
-      sk.on('room:participant_captured', () => {
-        if (!isCancelled) setCapturedCount(prev => prev + 1);
+      sk.on('room:participant_captured', ({ slotIndex }: { slotIndex: number }) => {
+        if (!isCancelled) {
+          setCapturedSlots((previous) => new Set(previous).add(slotIndex));
+        }
       });
 
       sk.on('room:all_captured', async ({ roomId, slots }: any) => {
-        if (!isHost) {
+        const canEditResult = isHost || currentRoom?.edit_policy === 'all_participants';
+        if (!canEditResult) {
           if (!isCancelled) setPhase('composing');
           return;
         }
@@ -219,7 +281,7 @@ export default function GroupStudioPage() {
           );
           
           if (isCancelled) return;
-          const { originalBlob, processedBlob } = await composeGroupPhoto({
+          const { originalBlob } = await composeGroupPhoto({
             images, 
             layout: frame.layout_config, 
             frameImageUrl: frame.image_url || frame.thumbnail_url || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
@@ -229,7 +291,7 @@ export default function GroupStudioPage() {
           let videoId, gifId;
           const userToken = useAuthStore.getState().token || localStorage.getItem('accessToken');
           
-          if (recordedChunks.current.length > 0) {
+          if (isHost && recordedChunks.current.length > 0) {
             const videoBlob = new Blob(recordedChunks.current, { type: 'video/webm' });
             const vf = new FormData();
             vf.append('file', videoBlob, 'recording.webm');
@@ -239,7 +301,7 @@ export default function GroupStudioPage() {
             } catch (err) { console.error('Video upload fail', err); }
           }
 
-          if (gifFrames.current.length > 0) {
+          if (isHost && gifFrames.current.length > 0) {
             await new Promise<void>((resolve) => {
               gifshot.createGIF({
                 images: gifFrames.current,
@@ -264,7 +326,13 @@ export default function GroupStudioPage() {
           }
 
           if (isCancelled) return;
-          await roomsApi.compose(roomId, originalBlob, processedBlob, videoId, gifId);
+          setPostProduction({
+            photoUrl: URL.createObjectURL(originalBlob),
+            frame,
+            recordingId: videoId,
+            gifId,
+          });
+          setPhase('editing');
         } catch (e: any) {
           if (!isCancelled) {
             message.error(e.message || 'Lỗi ghép ảnh');
@@ -316,21 +384,54 @@ export default function GroupStudioPage() {
     };
   }, [code, currentRoom?.id, selectedFrameId, isHost, navigate]);
 
+  if (phase === 'editing' && postProduction) {
+    return (
+      <main className="mx-auto min-h-screen w-full max-w-7xl px-4 py-6 sm:px-6">
+        <FilterScreen
+          photos={[postProduction.photoUrl]}
+          frame={postProduction.frame}
+          precomposed
+          onBack={() => setPhase('idle')}
+          onNext={async (processedCanvas, originalCanvas) => {
+            if (!currentRoom) return;
+            try {
+              setPhase('composing');
+              const [originalBlob, processedBlob] = await Promise.all([
+                canvasToPngBlob(originalCanvas),
+                canvasToPngBlob(processedCanvas),
+              ]);
+              await roomsApi.compose(
+                currentRoom.id,
+                originalBlob,
+                processedBlob,
+                postProduction.recordingId,
+                postProduction.gifId,
+              );
+              if (currentRoom.edit_policy === 'all_participants') {
+                navigate(`/group/${code}/result`);
+              }
+            } catch (error) {
+              message.error(error instanceof Error ? error.message : 'Không thể lưu ảnh đã chỉnh');
+              setPhase('editing');
+            }
+          }}
+        />
+      </main>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8 relative">
-      {countdown && (
-        <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <div className="text-[120px] font-bold text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]">
-            {countdown}
-          </div>
-        </div>
-      )}
-
       <div className="flex justify-between items-center mb-4">
         <Title level={3} className="!m-0">Buồng Chụp Trực Tuyến</Title>
         <div className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full font-bold">
-          Tiến trình: {capturedCount}/{currentRoom?.max_participants}
+          Tiến trình: {capturedCount}/{frameDetails?.layout_config.slots.length ?? currentRoom?.max_participants}
         </div>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sky-100 bg-white/80 px-4 py-3 text-sm">
+        <span className="font-semibold text-slate-700">Lượt chụp {roundIndex + 1}/{totalRounds}</span>
+        <span className="text-slate-500">Mỗi lượt sẽ điền {currentRoom?.max_participants} ô tiếp theo trong frame.</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -345,7 +446,7 @@ export default function GroupStudioPage() {
              {livekitRoomObj ? (
                <div className="absolute inset-0 w-full h-full bg-black">
                  <LiveKitRoom room={livekitRoomObj} serverUrl={undefined} token={undefined}>
-                   <StudioStage />
+                   <StudioStage onCameraCountChange={setConnectedCameraCount} />
                  </LiveKitRoom>
                </div>
              ) : (
@@ -355,10 +456,33 @@ export default function GroupStudioPage() {
                </div>
              )}
 
+             {flash && <div className="absolute inset-0 z-50 bg-white pointer-events-none" />}
+
+             {countdown !== null && (
+               <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/35 text-white backdrop-blur-[2px] animate-fadeIn pointer-events-none">
+                 <div className="flex h-28 w-28 items-center justify-center rounded-full border-4 border-[#89CFF0] bg-black/40 shadow-[0_0_50px_rgba(137,207,240,0.6)] sm:h-32 sm:w-32">
+                   <span className="text-6xl font-black drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)] animate-pulse sm:text-7xl">{countdown}</span>
+                 </div>
+                 <span className="mt-3 rounded-full border border-white/20 bg-black/60 px-4 py-1 text-xs font-bold uppercase tracking-widest backdrop-blur-md">
+                   Chuẩn bị chụp ảnh {roundIndex + 1}
+                 </span>
+               </div>
+             )}
+
+             {breakCountdown !== null && (
+               <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/40 text-white backdrop-blur-[2px] animate-fadeIn pointer-events-none">
+                 <div className="mb-1 text-base font-black uppercase text-[#FF00FF] drop-shadow-md sm:text-lg">✨ Chuẩn bị kiểu dáng mới!</div>
+                 <div className="my-2 flex h-24 w-24 items-center justify-center rounded-full border-4 border-[#FF00FF] bg-black/40 shadow-[0_0_40px_rgba(255,0,255,0.6)]">
+                   <span className="text-5xl font-black animate-bounce sm:text-6xl">{breakCountdown}</span>
+                 </div>
+                 <span className="rounded-full border border-white/20 bg-black/60 px-4 py-1 text-xs font-bold uppercase tracking-wider text-pink-200 backdrop-blur-md">Nghỉ 2 giây tạo dáng</span>
+               </div>
+             )}
+
              {phase === 'composing' && (
                <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center text-white z-40">
                  <Spin size="large" />
-                 <div className="mt-4 font-bold text-lg">Đang ghép ảnh và tạo Video/GIF...</div>
+                 <div className="mt-4 font-bold text-lg">{isHost ? 'Đang chuẩn bị ảnh hậu kỳ...' : 'Chủ phòng đang chỉnh sửa ảnh nhóm...'}</div>
                </div>
              )}
            </Card>
@@ -379,18 +503,35 @@ export default function GroupStudioPage() {
             </div>
           </Card>
           
-          {isHost && phase !== 'composing' && (
-            <Button 
-              type="primary" 
-              size="large" 
-              block 
-              className="bg-pink-600 hover:bg-pink-700 h-14 text-lg font-bold"
-              onClick={() => roomsApi.startCountdown(currentRoom!.id)}
-              disabled={countdown !== null}
-            >
-              {countdown !== null ? 'ĐANG CHỤP...' : 'BẮT ĐẦU CHỤP TỰ ĐỘNG'}
+          {isHost && postProduction && phase === 'idle' ? (
+            <Button type="primary" size="large" block className="bg-fuchsia-600 hover:bg-fuchsia-700 h-14 text-lg font-bold" onClick={() => setPhase('editing')}>
+              TIẾP TỤC HẬU KỲ & STICKER
             </Button>
-          )}
+          ) : isHost && !postProduction && phase !== 'composing' ? (
+            <>
+              <div className="mb-2 text-center text-xs text-slate-500">
+                Camera sẵn sàng: {connectedCameraCount}/{currentRoom?.participants?.length ?? currentRoom?.max_participants}
+              </div>
+              <Button
+                type="primary"
+                size="large"
+                block
+                className="bg-pink-600 hover:bg-pink-700 h-14 text-lg font-bold"
+                onClick={async () => {
+                  setCaptureSequenceStarted(true);
+                  try {
+                    await roomsApi.startCountdown(currentRoom!.id);
+                  } catch (error) {
+                    setCaptureSequenceStarted(false);
+                    message.error(error instanceof Error ? error.message : 'Không thể bắt đầu chụp');
+                  }
+                }}
+                disabled={captureSequenceStarted || countdown !== null || connectedCameraCount < (currentRoom?.participants?.length ?? currentRoom?.max_participants ?? 0)}
+              >
+                {countdown !== null ? `ĐANG ĐẾM NGƯỢC LƯỢT ${roundIndex + 1}...` : captureSequenceStarted ? `ĐANG CHỜ LƯỢT ${roundIndex + 1}/${totalRounds}` : 'BẮT ĐẦU CHỤP'}
+              </Button>
+            </>
+          ) : null}
         </div>
       </div>
     </div>

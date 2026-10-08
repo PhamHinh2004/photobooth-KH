@@ -62,8 +62,8 @@ export async function attachCustomerProfiles<T extends SocialItem>(items: T[]): 
 }
 
 export const socialApi = {
-  getFeed: async (page = 1, limit = 10, filter = 'all') => {
-    const query = filter && filter !== 'all' ? `&filter=${encodeURIComponent(filter)}` : '';
+  getFeed: async (page = 1, limit = 10, sessionType?: 'single' | 'group') => {
+    const query = sessionType ? `&sessionType=${encodeURIComponent(sessionType)}` : '';
     const { data } = await axiosInstance.get(`/posts?page=${page}&limit=${limit}${query}`);
     return { ...data, data: await attachCustomerProfiles(data.data || []) };
   },

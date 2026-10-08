@@ -1,30 +1,57 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGroupCaptureStore } from '../store/roomStore';
+import type { Participant } from '../types';
 import { connectRoomSocket } from '../realtime/roomSocket';
 import { joinLivekit } from '../media/useLiveKitRoom';
 import { roomsApi } from '../api/rooms.api';
-import { Button, Typography, message, Card } from 'antd';
+import { Button, Typography, message, Card, Switch } from 'antd';
+import { UserOutlined } from '@ant-design/icons';
 import { Room } from '../types';
 import { Socket } from 'socket.io-client';
 import { useAuthStore } from '@/stores/auth.store';
-import { LiveKitRoom, GridLayout, ParticipantTile, useTracks } from '@livekit/components-react';
+import { LiveKitRoom, ParticipantTile, useTracks } from '@livekit/components-react';
 import '@livekit/components-styles';
 import { Track } from 'livekit-client';
 import { QRCodeSVG } from 'qrcode.react';
 
 const { Title, Text } = Typography;
 
-function LobbyStage() {
+function LobbyStage({ participants, maxParticipants }: { participants: Participant[]; maxParticipants: number }) {
   const tracks = useTracks(
     [{ source: Track.Source.Camera, withPlaceholder: true }],
     { onlySubscribed: false }
   );
+  const columns = Math.min(4, Math.ceil(Math.sqrt(maxParticipants)));
 
   return (
-    <GridLayout tracks={tracks}>
-      <ParticipantTile />
-    </GridLayout>
+    <div className="grid h-full w-full gap-2 p-2" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+      {Array.from({ length: maxParticipants }, (_, slotIndex) => {
+        const participant = participants.find((item) => item.slot_index === slotIndex);
+        const track = tracks.find((item) =>
+          participant && (
+            item.participant.identity === participant.account_id ||
+            item.participant.identity.startsWith(`${participant.account_id}:`)
+          ),
+        );
+
+        return (
+          <div key={slotIndex} className="relative min-h-0 min-w-0 overflow-hidden rounded-xl border border-white/15 bg-slate-800">
+            {track ? (
+              <ParticipantTile trackRef={track} className="h-full w-full" />
+            ) : (
+              <div className="flex h-full min-h-24 flex-col items-center justify-center gap-2 text-center text-slate-400">
+                <UserOutlined className="text-2xl" />
+                <span className="px-2 text-xs">{participant ? 'Đang kết nối camera...' : `Đang chờ người ${slotIndex + 1}`}</span>
+              </div>
+            )}
+            <div className="absolute bottom-2 left-2 max-w-[calc(100%-1rem)] truncate rounded bg-black/60 px-2 py-1 text-xs text-white">
+              {participant ? `${participant.account.username}${participant.is_host ? ' · Chủ phòng' : ''}` : `Vị trí ${slotIndex + 1}`}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -35,6 +62,8 @@ export default function GroupLobbyPage() {
   const { user } = useAuthStore();
 
   const [livekitRoom, setLivekitRoom] = useState<any>(null);
+  const [savingEditPolicy, setSavingEditPolicy] = useState(false);
+  const [openingStudio, setOpeningStudio] = useState(false);
 
   const isHost = currentRoom?.host_account_id === String(user?.id);
   const isAllReady = currentRoom?.participants?.length === currentRoom?.max_participants &&
@@ -76,7 +105,13 @@ export default function GroupLobbyPage() {
           }
         });
 
-        sk.on('room:countdown_started', () => {
+        sk.on('room:edit_policy_updated', () => {
+          roomsApi.getByCode(code).then((updatedRoom) => {
+            if (!isCancelled) setCurrentRoom(updatedRoom);
+          });
+        });
+
+        sk.on('room:studio_opened', () => {
           if (!isCancelled) navigate(`/group/${code}/studio`);
         });
 
@@ -109,7 +144,7 @@ export default function GroupLobbyPage() {
             const r = await roomsApi.getByCode(code);
             if (isCancelled) return;
             setCurrentRoom(r);
-            if (r.status === 'countdown' || r.status === 'capturing') {
+            if (r.status === 'waiting' || r.status === 'countdown' || r.status === 'capturing') {
               navigate(`/group/${code}/studio`);
             }
           } catch (e) { }
@@ -132,11 +167,26 @@ export default function GroupLobbyPage() {
 
   const handleStart = async () => {
     if (!currentRoom) return;
+    setOpeningStudio(true);
     try {
-      await roomsApi.startCountdown(currentRoom.id);
-      // Wait for socket event 'room:countdown_started' to navigate
-    } catch (e: any) {
-      message.error(e.message || 'Lỗi bắt đầu chụp');
+      await roomsApi.openStudio(currentRoom.id);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Không thể mở buồng chụp');
+      setOpeningStudio(false);
+    }
+  };
+
+  const handleEditPolicyChange = async (hostOnly: boolean) => {
+    if (!currentRoom) return;
+    setSavingEditPolicy(true);
+    try {
+      await roomsApi.setEditPolicy(currentRoom.id, hostOnly ? 'host_only' : 'all_participants');
+      setCurrentRoom(await roomsApi.getByCode(code!));
+      message.success(hostOnly ? 'Chỉ trưởng phòng được chỉnh ảnh và đăng review' : 'Tất cả thành viên có thể chỉnh ảnh và đăng review');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Không thể cập nhật quyền hậu kỳ');
+    } finally {
+      setSavingEditPolicy(false);
     }
   };
 
@@ -171,6 +221,33 @@ export default function GroupLobbyPage() {
               ))}
             </ul>
           </Card>
+
+          {isHost ? (
+            <Card title="Quyền hậu kỳ & đánh giá" size="small">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-slate-800">Chỉ trưởng phòng chỉnh sửa</div>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">
+                    {currentRoom.edit_policy === 'host_only'
+                      ? 'Chỉ bạn được hậu kỳ và đăng review.'
+                      : 'Tắt: mỗi thành viên tự hậu kỳ và đăng review.'}
+                  </div>
+                </div>
+                <Switch
+                  checked={currentRoom.edit_policy === 'host_only'}
+                  loading={savingEditPolicy}
+                  onChange={handleEditPolicyChange}
+                  aria-label="Chỉ trưởng phòng được chỉnh sửa ảnh"
+                />
+              </div>
+            </Card>
+          ) : (
+            <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              {currentRoom.edit_policy === 'host_only'
+                ? 'Trưởng phòng sẽ chỉnh sửa và đăng review.'
+                : 'Sau khi chụp, bạn có thể tự chỉnh sửa và đăng review.'}
+            </div>
+          )}
         </div>
 
         <div className="md:col-span-2">
@@ -178,7 +255,7 @@ export default function GroupLobbyPage() {
             {livekitRoom ? (
               <div className="h-[400px] w-full rounded-lg overflow-hidden bg-black">
                 <LiveKitRoom room={livekitRoom} serverUrl={undefined} token={undefined}>
-                  <LobbyStage />
+                  <LobbyStage participants={currentRoom.participants ?? []} maxParticipants={currentRoom.max_participants} />
                 </LiveKitRoom>
               </div>
             ) : (
@@ -199,9 +276,9 @@ export default function GroupLobbyPage() {
               size="large"
               className="bg-teal-600 hover:bg-teal-700"
               onClick={handleStart}
-              disabled={!isAllReady}
+              disabled={!isAllReady || openingStudio}
             >
-              VÀO BUỒNG CHỤP NGAY
+              {openingStudio ? 'ĐANG MỞ BUỒNG CHỤP...' : 'VÀO BUỒNG CHỤP'}
             </Button>
           ) : (
             <Button size="large" disabled>Chờ Host Bắt Đầu</Button>

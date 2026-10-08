@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { DiscussionSection } from './DiscussionSection';
 import { LikeButton } from './LikeButton';
 import { useNavigate } from 'react-router-dom';
-import { Download, Bookmark, Share2, Maximize2, Users, ArrowLeft, MessageCircle } from 'lucide-react';
+import { Download, Bookmark, Share2, Maximize2, Users, UserRound, ArrowLeft, MessageCircle } from 'lucide-react';
 import { sharePostToFacebook } from '../../utils/facebookShare';
 
 interface PostDetailLayoutProps {
@@ -33,6 +33,8 @@ export function PostDetailLayout({ post, onCommentDeleted }: PostDetailLayoutPro
   const navigate = useNavigate();
   const [shareMessage, setShareMessage] = useState('');
   const frame = post.session?.photo?.frame;
+  const isGroupCapture = post.session?.session_type === 'group';
+  const groupName = post.session?.room?.name || post.session?.room?.room_code;
   const frameWidth = Number(frame?.width);
   const frameHeight = Number(frame?.height);
   const frameScale = frameWidth > 0 && frameHeight > 0 ? Math.min(48 / frameWidth, 68 / frameHeight) : 1;
@@ -71,11 +73,17 @@ export function PostDetailLayout({ post, onCommentDeleted }: PostDetailLayoutPro
             <ArrowLeft size={16} /> Quay lại Cộng Đồng Đánh Giá
           </button>
           <div className="flex items-center gap-2">
-            {post.session?.session_type && (
-              <span className="bg-pink-100 text-pink-600 text-[12px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1">
-                <Users size={14} /> {post.session.session_type === 'group' ? 'Chụp Nhóm' : 'Chụp Đơn'}
+            <div className="flex flex-col items-end gap-1">
+              <span className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-bold ${isGroupCapture ? 'bg-pink-100 text-pink-700' : 'bg-sky-100 text-sky-700'}`}>
+                {isGroupCapture ? <Users size={14} /> : <UserRound size={14} />}
+                {isGroupCapture ? 'Chụp Nhóm' : 'Chụp Đơn'}
               </span>
-            )}
+              {isGroupCapture && (
+                <span className="max-w-40 truncate text-[11px] font-medium text-zinc-500" title={groupName || 'Phòng nhóm'}>
+                  {groupName || 'Phòng nhóm'}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
