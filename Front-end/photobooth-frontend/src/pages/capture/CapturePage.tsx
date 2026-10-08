@@ -11,6 +11,7 @@ import {
 } from '@/api/capture.api'
 import { socialApi } from '@/api/social.api'
 import { authApi } from '@/api/auth.api'
+import { sharePostToFacebook } from '@/utils/facebookShare'
 import AiFrameAssistant from '@/components/assistant/AiFrameAssistant'
 
 import PackageSelector, { PACKAGE_OPTIONS } from '@/components/capture/step1/PackageSelector'
@@ -251,7 +252,7 @@ export default function CapturePage() {
     setIsSharing(true)
     setShareError(null)
     try {
-      await socialApi.createPost({
+      const createdPost = await socialApi.createPost({
         session_id: createdSessionId,
         cover_image_url: uploadedResults.photo.processed_file_url,
         caption: captionText,
@@ -259,6 +260,9 @@ export default function CapturePage() {
         rating: frameRating,
       })
       setIsShareModalOpen(false)
+      if (createdPost?.id) {
+        await sharePostToFacebook(createdPost.id)
+      }
       navigate(`/reviews`)
     } catch (err: any) {
       console.error('Lỗi khi chia sẻ lên feed:', err)

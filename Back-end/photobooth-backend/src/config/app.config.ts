@@ -6,4 +6,5 @@ export default registerAs('app', () => ({
   apiPrefix: process.env.API_PREFIX ?? 'api/v1',
   appName: process.env.APP_NAME ?? 'Photobooth API',
   corsOrigin: process.env.CORS_ORIGIN ?? '*',
+  frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:5173',
 }));

@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { DiscussionSection } from './DiscussionSection';
 import { LikeButton } from './LikeButton';
 import { useNavigate } from 'react-router-dom';
 import { Download, Bookmark, Share2, Maximize2, Users, UserRound, ArrowLeft, MessageCircle } from 'lucide-react';
+import { sharePostToFacebook } from '../../utils/facebookShare';
 
 interface PostDetailLayoutProps {
   post: any;
@@ -29,6 +31,7 @@ const formatRelativeTime = (dateString: string) => {
 
 export function PostDetailLayout({ post, onCommentDeleted }: PostDetailLayoutProps) {
   const navigate = useNavigate();
+  const [shareMessage, setShareMessage] = useState('');
   const frame = post.session?.photo?.frame;
   const isGroupCapture = post.session?.session_type === 'group';
   const groupName = post.session?.room?.name || post.session?.room?.room_code;
@@ -47,8 +50,14 @@ export function PostDetailLayout({ post, onCommentDeleted }: PostDetailLayoutPro
     }
   };
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+  const showShareMessage = (message: string) => {
+    setShareMessage(message);
+    window.setTimeout(() => setShareMessage(''), 3000);
+  };
+
+  const handleFacebookShare = async () => {
+    const result = await sharePostToFacebook(post.id);
+    showShareMessage(result.opened ? 'Đã mở cửa sổ chia sẻ Facebook' : 'Đã sao chép link bài viết');
   };
 
   return (
@@ -153,11 +162,12 @@ export function PostDetailLayout({ post, onCommentDeleted }: PostDetailLayoutPro
             <Bookmark size={20} className="fill-current" />
             <span className="text-[12px] font-bold">Lưu</span>
           </button>
-          <button onClick={copyLink} className="flex flex-col items-center justify-center gap-1 py-3 bg-white rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-700">
+          <button onClick={handleFacebookShare} className="flex flex-col items-center justify-center gap-1 py-3 bg-white rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-700">
             <Share2 size={20} className="text-zinc-400" />
-            <span className="text-[12px] font-bold">Chia Sẻ</span>
+            <span className="text-[12px] font-bold">Facebook</span>
           </button>
         </div>
+        {shareMessage && <p className="text-center text-xs font-medium text-emerald-600">{shareMessage}</p>}
       </div>
 
       {/* Right Column: Content and Comments */}

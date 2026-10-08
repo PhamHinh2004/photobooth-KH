@@ -8,19 +8,26 @@ import {
   UseGuards,
   Patch,
   Delete,
+  Res,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { Response } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { SessionType } from '../session-results/entities/session-result.entity';
 
 @ApiTags('Posts')
 @Controller('posts')
 export class PostsController {
-  constructor(private readonly postsService: PostsService) {}
+  constructor(
+    private readonly postsService: PostsService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @ApiOperation({ summary: 'Create a new post' })
   @ApiBearerAuth()
@@ -59,6 +66,43 @@ export class PostsController {
     @Query('limit') limit = 10,
   ) {
     return this.postsService.findUserPosts(user.id, +page, +limit);
+  }
+
+  @Public()
+  @Get(':id/share')
+  async sharePreview(@Param('id') id: string, @Res() response: Response) {
+    const post = await this.postsService.findSharePreview(id);
+    const frontendUrl = this.configService.get<string>('app.frontendUrl') ?? 'http://localhost:5173';
+    const postUrl = `${frontendUrl.replace(/\/$/, '')}/reviews/${post.id}`;
+    const title = 'Ảnh chụp tại KH Booth';
+    const description = post.caption || 'Xem ảnh của tôi tại KH Booth photobooth';
+    const escapeHtml = (value: string) => value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+    return response.type('html').send(`<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <meta property="og:title" content="${escapeHtml(title)}">
+    <meta property="og:description" content="${escapeHtml(description)}">
+    <meta property="og:image" content="${escapeHtml(post.cover_image_url)}">
+    <meta property="og:image:secure_url" content="${escapeHtml(post.cover_image_url)}">
+    <meta property="og:image:alt" content="Ảnh photobooth tại KH Booth">
+    <meta property="og:url" content="${escapeHtml(postUrl)}">
+    <meta property="og:type" content="article">
+    <meta name="twitter:card" content="summary_large_image">
+    <title>${escapeHtml(title)}</title>
+  </head>
+  <body>
+    <p>Đang mở bài viết...</p>
+    <script>window.location.replace(${JSON.stringify(postUrl)});</script>
+    <noscript><a href="${escapeHtml(postUrl)}">Mở bài viết</a></noscript>
+  </body>
+</html>`);
   }
 
   @ApiOperation({ summary: 'Get post by id' })
