@@ -7,6 +7,7 @@ import { PostLike } from './entities/post-like.entity';
 import { SessionResult, SessionType } from '../session-results/entities/session-result.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { PostStatus } from './entities/post.entity';
 
 @Injectable()
 export class PostsService {
@@ -141,6 +142,75 @@ export class PostsService {
     };
   }
 
+  async getMetrics() {
+    const totalPosts = await this.postRepository.count();
+    const pendingPosts = await this.postRepository.count({ where: { status: PostStatus.HIDDEN as any } });
+    const { sum } = await this.postRepository
+      .createQueryBuilder('post')
+      .select('SUM(post.rating)', 'sum')
+      .getRawOne();
+    
+    const averageRating = totalPosts > 0 ? (sum / totalPosts).toFixed(1) : '0.0';
+    
+    const { interactions } = await this.postRepository
+      .createQueryBuilder('post')
+      .select('SUM(post.likes_count + post.comments_count + post.views_count)', 'interactions')
+      .getRawOne();
+
+    return {
+      totalPosts,
+      pendingPosts,
+      averageRating: parseFloat(averageRating),
+      totalInteractions: parseInt(interactions || '0', 10),
+    };
+  }
+
+  async findAllForAdmin(query: any) {
+    const { page = 1, limit = 10, search, status, rating, sortBy = 'created_at', sortOrder = 'DESC' } = query;
+    const qb = this.postRepository
+      .createQueryBuilder('post')
+      .leftJoinAndSelect('post.account', 'account')
+      .leftJoinAndSelect('account.customer', 'customer')
+      .leftJoinAndSelect('post.session', 'session')
+      .leftJoinAndSelect('session.photo', 'photo')
+      .leftJoinAndSelect('photo.frame', 'frame')
+      .orderBy(`post.${sortBy}`, sortOrder.toUpperCase() as 'ASC' | 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (status) {
+      qb.andWhere('post.status = :status', { status });
+    }
+    if (rating) {
+      qb.andWhere('post.rating = :rating', { rating });
+    }
+    if (search) {
+      qb.andWhere('(post.caption ILIKE :search OR account.username ILIKE :search)', { search: `%${search}%` });
+    }
+
+    const [data, total] = await qb.getManyAndCount();
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+  }
+
+  async exportCsv(query: any) {
+    const { data } = await this.findAllForAdmin({ ...query, page: 1, limit: 100000 });
+    let csv = '\uFEFFID,Tài khoản,Nội dung,Rating,Trạng thái,Ngày tạo\n';
+    for (const post of data) {
+      csv += `${post.id},"${post.account?.username || ''}","${(post.caption || '').replace(/"/g, '""')}",${post.rating || ''},${post.status},${post.created_at.toISOString()}\n`;
+    }
+    return csv;
+  }
+
+  async updateStatus(id: string, status: any) {
+    await this.postRepository.update(id, { status });
+    return this.findOne(id);
+  }
+
+  async updatePin(id: string, is_pinned: boolean) {
+    await this.postRepository.update(id, { is_pinned });
+    return this.findOne(id);
+  }
+
   async findOne(id: string) {
     const post = await this.postRepository.findOne({
       where: { id },
@@ -188,6 +258,23 @@ export class PostsService {
     });
     if (!post) throw new NotFoundException('Post not found');
     if (post.account_id !== accountId) throw new ForbiddenException('You can only delete your own posts');
+
+    await this.dataSource.transaction(async (manager) => {
+      if (post.rating && post.session?.photo?.frame_id) {
+        await this.revertRatingFromFrame(manager, post.session.photo.frame_id, post.rating);
+      }
+      await manager.remove(post);
+    });
+
+    this.eventEmitter.emit('post.deleted', id);
+  }
+
+  async removeForAdmin(id: string) {
+    const post = await this.postRepository.findOne({
+      where: { id },
+      relations: { session: { photo: true } },
+    });
+    if (!post) throw new NotFoundException('Post not found');
 
     await this.dataSource.transaction(async (manager) => {
       if (post.rating && post.session?.photo?.frame_id) {

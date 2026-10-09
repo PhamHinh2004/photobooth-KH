@@ -1,8 +1,20 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
+import { useAuthStore } from '@/stores/auth.store'
 
 const AuthLayout: React.FC = () => {
   const navigate = useNavigate()
+  const { isAuthenticated, user } = useAuthStore()
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role?.toLowerCase() === 'admin') {
+        navigate('/admin', { replace: true })
+      } else {
+        navigate('/', { replace: true })
+      }
+    }
+  }, [isAuthenticated, user, navigate])
 
   return (
     <div className="min-h-screen text-on-surface font-body-md overflow-x-hidden flex flex-col justify-center items-center py-10 px-4 relative">

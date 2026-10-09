@@ -11,11 +11,16 @@ import AboutUsPage from '../pages/about/AboutUsPage'
 import ProfilePage from '../pages/profile/ProfilePage'
 import ChangePasswordPage from '../pages/profile/ChangePasswordPage'
 import AccountsPage from '../pages/admin/AccountsPage'
+import AccountDetailPage from '../pages/admin/AccountDetailPage'
+import CustomersPage from '../pages/admin/CustomersPage'
+import CustomerDetailPage from '../pages/admin/CustomerDetailPage'
+import ReviewsPage from '../pages/admin/ReviewsPage'
 import CapturePage from '../pages/capture/CapturePage'
 import FeedPage from '../pages/social/FeedPage'
 import PostDetailPage from '../pages/social/PostDetailPage'
 import MyPostsPage from '../pages/social/MyPostsPage'
 import PublicLayout from '../components/layouts/PublicLayout'
+import UserGuard from '../components/layouts/UserGuard'
 import GroupSetupPage from '../features/group-capture/pages/GroupSetupPage'
 import GroupSizePage from '../features/group-capture/pages/GroupSizePage'
 import GroupFramePage from '../features/group-capture/pages/GroupFramePage'
@@ -69,75 +74,94 @@ const routes: RouteObject[] = [
         path: 'accounts',
         element: <AccountsPage />,
       },
+      {
+        path: 'accounts/:id',
+        element: <AccountDetailPage />,
+      },
+      {
+        path: 'customers',
+        element: <CustomersPage />,
+      },
+      {
+        path: 'customers/:id',
+        element: <CustomerDetailPage />,
+      },
+      {
+        path: 'reviews',
+        element: <ReviewsPage />,
+      },
     ],
   },
 
-  // Public home page
+  // Public / User routes protected from admin
   {
     path: '/',
-    element: <HomePage />,
-  },
-  {
-    path: '/about-us',
-    element: <AboutUsPage />,
-  },
-  {
-    path: '/profile',
-    element: <ProfilePage />,
-  },
-  {
-    path: '/change-password',
-    element: <ChangePasswordPage />,
-  },
-
-  // Photobooth capture
-  {
-    path: '/capture',
-    element: <CapturePage />,
-  },
-
-  // Social / Reviews
-  {
-    path: '/reviews',
-    element: <PublicLayout><FeedPage /></PublicLayout>,
-  },
-  {
-    path: '/reviews/:id',
-    element: <PublicLayout><PostDetailPage /></PublicLayout>,
-  },
-  {
-    path: '/my-posts',
-    element: <PublicLayout><MyPostsPage /></PublicLayout>,
-  },
-
-  // Group Capture
-  {
-    path: '/group/new',
-    element: <PublicLayout><GroupSetupPage /></PublicLayout>,
-  },
-  {
-    path: '/group/new/size',
-    element: <PublicLayout><GroupSizePage /></PublicLayout>,
-  },
-  {
-    path: '/group/new/frame',
-    element: <PublicLayout><GroupFramePage /></PublicLayout>,
-  },
-  {
-    path: '/group/join/:code',
-    element: <PublicLayout><GroupJoinPage /></PublicLayout>,
-  },
-  {
-    path: '/group/:code/lobby',
-    element: <PublicLayout><GroupLobbyPage /></PublicLayout>,
-  },
-  {
-    path: '/group/:code/studio',
-    element: <PublicLayout><GroupStudioPage /></PublicLayout>,
-  },
-  {
-    path: '/group/:code/result',
-    element: <PublicLayout><GroupResultPage /></PublicLayout>,
+    element: <UserGuard />,
+    children: [
+      {
+        index: true,
+        element: <HomePage />,
+      },
+      {
+        path: 'about-us',
+        element: <AboutUsPage />,
+      },
+      {
+        path: 'profile',
+        element: <ProfilePage />,
+      },
+      {
+        path: 'change-password',
+        element: <ChangePasswordPage />,
+      },
+      // Photobooth capture
+      {
+        path: 'capture',
+        element: <CapturePage />,
+      },
+      // Social / Reviews
+      {
+        path: 'reviews',
+        element: <PublicLayout><FeedPage /></PublicLayout>,
+      },
+      {
+        path: 'reviews/:id',
+        element: <PublicLayout><PostDetailPage /></PublicLayout>,
+      },
+      {
+        path: 'my-posts',
+        element: <PublicLayout><MyPostsPage /></PublicLayout>,
+      },
+      // Group Capture
+      {
+        path: 'group/new',
+        element: <PublicLayout><GroupSetupPage /></PublicLayout>,
+      },
+      {
+        path: 'group/new/size',
+        element: <PublicLayout><GroupSizePage /></PublicLayout>,
+      },
+      {
+        path: 'group/new/frame',
+        element: <PublicLayout><GroupFramePage /></PublicLayout>,
+      },
+      {
+        path: 'group/join/:code',
+        element: <PublicLayout><GroupJoinPage /></PublicLayout>,
+      },
+      {
+        path: 'group/:code/lobby',
+        element: <PublicLayout><GroupLobbyPage /></PublicLayout>,
+      },
+      {
+        path: 'group/:code/studio',
+        element: <PublicLayout><GroupStudioPage /></PublicLayout>,
+      },
+      {
+        path: 'group/:code/result',
+        element: <PublicLayout><GroupResultPage /></PublicLayout>,
+      }
+    ]
   },
 
   // Fallback

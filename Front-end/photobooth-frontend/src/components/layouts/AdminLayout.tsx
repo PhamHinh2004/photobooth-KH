@@ -6,6 +6,8 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  TeamOutlined,
+  StarOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '@/stores/auth.store'
 import { Dropdown } from 'antd'
@@ -39,6 +41,18 @@ const AdminLayout = () => {
       icon: <UserOutlined />,
       label: 'Quản lý tài khoản',
       path: '/admin/accounts',
+    },
+    {
+      key: 'customers',
+      icon: <TeamOutlined />,
+      label: 'Quản lý khách hàng',
+      path: '/admin/customers',
+    },
+    {
+      key: 'reviews',
+      icon: <StarOutlined />,
+      label: 'Quản lý đánh giá',
+      path: '/admin/reviews',
     },
   ]
 

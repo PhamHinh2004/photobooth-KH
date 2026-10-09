@@ -26,6 +26,11 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
       return
     }
 
+    if (user?.role?.toLowerCase() === 'admin') {
+      navigate('/admin', { replace: true })
+      return
+    }
+
     setAvatarUrl(user?.avatarUrl || null)
     setAvatarResolved(Boolean(user?.avatarUrl))
 

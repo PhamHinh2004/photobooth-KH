@@ -101,6 +101,10 @@ export const socialApi = {
     const { data } = await axiosInstance.get(`/posts/me?page=${page}&limit=${limit}`);
     return data;
   },
+  getUserPosts: async (userId: string, page = 1, limit = 10) => {
+    const { data } = await axiosInstance.get(`/posts/user/${userId}?page=${page}&limit=${limit}`);
+    return { ...data, data: await attachCustomerProfiles(data.data || []) };
+  },
   deletePost: async (id: string) => {
     const { data } = await axiosInstance.delete(`/posts/${id}`);
     return data;
