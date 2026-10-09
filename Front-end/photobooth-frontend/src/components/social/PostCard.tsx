@@ -40,6 +40,7 @@ interface PostCardProps {
       } 
     };
   };
+  hideApplyButton?: boolean;
 }
 
 interface CommentData {
@@ -56,7 +57,7 @@ interface CommentData {
   } | null;
 }
 
-export function PostCard({ post }: PostCardProps) {
+export function PostCard({ post, hideApplyButton }: PostCardProps) {
   const navigate = useNavigate();
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<CommentData[]>([]);
@@ -256,18 +257,20 @@ export function PostCard({ post }: PostCardProps) {
         )}
 
         {/* Action Button */}
-        <button
-          onClick={handleApplyFrame}
-          disabled={applying}
-          className="w-full mt-4 py-3 rounded-xl bg-[#0f627a] hover:bg-[#0c4e62] disabled:opacity-70 disabled:cursor-wait text-white text-[14px] font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
-        >
-          {applying ? 'Đang Xử Lý...' : 'Áp Dụng Frame Này Ngay'}
-          {!applying && (
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          )}
-        </button>
+        {!hideApplyButton && (
+          <button
+            onClick={handleApplyFrame}
+            disabled={applying}
+            className="w-full mt-4 py-3 rounded-xl bg-[#0f627a] hover:bg-[#0c4e62] disabled:opacity-70 disabled:cursor-wait text-white text-[14px] font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+          >
+            {applying ? 'Đang Xử Lý...' : 'Áp Dụng Frame Này Ngay'}
+            {!applying && (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

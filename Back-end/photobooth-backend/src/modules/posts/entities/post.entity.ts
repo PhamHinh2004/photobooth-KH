@@ -6,8 +6,10 @@ import { Account } from '../../accounts/entities/account.entity';
 import { SessionResult } from '../../session-results/entities/session-result.entity';
 
 export enum PostStatus {
+  PENDING = 'pending',
   PUBLISHED = 'published',
   HIDDEN = 'hidden',
+  REJECTED = 'rejected',
 }
 
 @Entity('posts')
@@ -53,6 +55,9 @@ export class Post {
 
   @Column({ type: 'enum', enum: PostStatus, default: PostStatus.PUBLISHED })
   status: PostStatus;
+
+  @Column({ default: false })
+  is_pinned: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

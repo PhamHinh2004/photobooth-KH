@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import {
   BadRequestException,
   ConflictException,
@@ -7,7 +6,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
-import { Repository } from 'typeorm';
+import { Repository, MoreThanOrEqual } from 'typeorm';
+import { Role } from '../../common/enums/role.enum';
 import { Customer } from '../customers/entities/customer.entity';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateAccountDto } from './dto/create-account.dto';
@@ -101,6 +101,73 @@ export class AccountsService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async getMetrics() {
+    const [total, active, locked, admin, staff, thisWeekTotal] = await Promise.all([
+      this.accountRepository.count(),
+      this.accountRepository.count({ where: { isActive: true } }),
+      this.accountRepository.count({ where: { isActive: false } }),
+      this.accountRepository.count({ where: { role: Role.ADMIN } }),
+      this.accountRepository.count({ where: { role: Role.STAFF } }),
+      this.accountRepository.count({
+        where: {
+          createdAt: MoreThanOrEqual(new Date(new Date().setDate(new Date().getDate() - 7))),
+        },
+      }),
+    ]);
+
+    return {
+      total,
+      active,
+      locked,
+      admin,
+      staff,
+      thisWeekTotal,
+    };
+  }
+
+  async exportAccounts(queryDto: GetAccountsQueryDto) {
+    const { search, role, isActive, sortBy = 'createdAt', sortOrder = 'DESC' } = queryDto;
+    
+    const query = this.accountRepository
+      .createQueryBuilder('account')
+      .leftJoinAndSelect('account.customer', 'customer')
+      .orderBy(`account.${sortBy}`, sortOrder.toUpperCase() as 'ASC' | 'DESC');
+
+    if (role) {
+      query.andWhere('account.role = :role', { role });
+    }
+
+    if (isActive !== undefined) {
+      query.andWhere('account.isActive = :isActive', { isActive });
+    }
+
+    if (search) {
+      query.andWhere(
+        '(account.email ILIKE :search OR account.username ILIKE :search OR customer.fullName ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    const data = await query.getMany();
+    
+    const headers = ['ID', 'Email', 'Username', 'Vai Trò', 'Trạng Thái', 'Ngày Tạo'];
+    const csvRows = [headers.join(',')];
+    
+    for (const account of data) {
+      const row = [
+        account.id,
+        account.email,
+        account.username,
+        account.role,
+        account.isActive ? 'Đang hoạt động' : 'Đã khóa',
+        account.createdAt ? account.createdAt.toISOString() : ''
+      ];
+      csvRows.push(row.map(v => `"${v}"`).join(','));
+    }
+    
+    return csvRows.join('\n');
   }
 
   /**

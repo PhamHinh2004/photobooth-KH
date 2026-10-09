@@ -68,6 +68,20 @@ export class PostsController {
     return this.postsService.findUserPosts(user.id, +page, +limit);
   }
 
+  @ApiOperation({ summary: 'Get posts by user ID' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @Get('user/:userId')
+  findUserPostsById(
+    @Param('userId') userId: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    return this.postsService.findUserPosts(userId, +page, +limit);
+  }
+
   @Public()
   @Get(':id/share')
   async sharePreview(@Param('id') id: string, @Res() response: Response) {
