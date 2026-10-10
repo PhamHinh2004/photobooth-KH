@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bookmark, MessageCircle } from 'lucide-react';
 import { LikeButton } from './LikeButton';
+import { RepostButton } from './RepostButton';
+import { SaveButton } from './SaveButton';
 import { socialApi } from '../../api/social.api';
 import { CommentInput } from './CommentInput';
 import { CommentThread } from './CommentThread';
 import { buildCommentTree } from './commentTree';
+import { useSocialStore } from '../../stores/social.store';
 
 interface PostCardProps {
   post: {
@@ -14,6 +17,7 @@ interface PostCardProps {
     caption: string;
     likes_count: number;
     comments_count: number;
+    repost_count?: number;
     views_count?: number;
     style_tags?: string[];
     created_at: string;
@@ -59,6 +63,11 @@ interface CommentData {
 
 export function PostCard({ post, hideApplyButton }: PostCardProps) {
   const navigate = useNavigate();
+  const { savedPostIds, repostedPostIds } = useSocialStore();
+  
+  const isSaved = savedPostIds.includes(post.id);
+  const isReposted = repostedPostIds.includes(post.id);
+
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<CommentData[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -214,15 +223,14 @@ export function PostCard({ post, hideApplyButton }: PostCardProps) {
             </button>
           </div>
           <div className="flex gap-2">
+            <RepostButton postId={post.id} initialCount={post.repost_count ?? 0} initialReposted={isReposted} />
             <button 
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowComments(!showComments); }}
               className={`flex items-center gap-1 text-[12px] font-bold px-3 py-1.5 rounded transition-colors ${showComments ? 'bg-blue-100 text-blue-700' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
             >
               <MessageCircle size={14} /> {post.comments_count ?? 0} Bình luận
             </button>
-            <button className="text-zinc-400 hover:text-zinc-600 bg-zinc-50 p-1.5 rounded">
-              <Bookmark size={16} />
-            </button>
+            <SaveButton postId={post.id} initialSaved={isSaved} />
           </div>
         </div>
         

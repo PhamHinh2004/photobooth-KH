@@ -4,8 +4,11 @@ import { Repository, DataSource, EntityManager } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Post } from './entities/post.entity';
 import { PostLike } from './entities/post-like.entity';
+import { PostRepost } from './entities/post-repost.entity';
+import { SavedPost } from './entities/saved-post.entity';
 import { SessionResult, SessionType } from '../session-results/entities/session-result.entity';
 import { CreatePostDto } from './dto/create-post.dto';
+import { RepostDto } from './dto/repost.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PostStatus } from './entities/post.entity';
 
@@ -14,6 +17,8 @@ export class PostsService {
   constructor(
     @InjectRepository(Post) private readonly postRepository: Repository<Post>,
     @InjectRepository(PostLike) private readonly postLikeRepository: Repository<PostLike>,
+    @InjectRepository(PostRepost) private readonly postRepostRepository: Repository<PostRepost>,
+    @InjectRepository(SavedPost) private readonly savedPostRepository: Repository<SavedPost>,
     @InjectRepository(SessionResult) private readonly sessionRepository: Repository<SessionResult>,
     private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource,
@@ -284,5 +289,79 @@ export class PostsService {
     });
 
     this.eventEmitter.emit('post.deleted', id);
+  }
+
+  async toggleRepost(postId: string, accountId: string, dto: RepostDto) {
+    const existing = await this.postRepostRepository.findOne({
+      where: { post_id: postId, account_id: accountId },
+    });
+
+    if (existing) {
+      await this.postRepostRepository.delete(existing.id);
+      await this.postRepository.decrement({ id: postId }, 'repost_count', 1);
+      this.eventEmitter.emit('post.unreposted', { postId, accountId });
+      return { reposted: false };
+    }
+
+    await this.postRepostRepository.save({
+      post_id: postId,
+      account_id: accountId,
+      quote_caption: dto.quoteCaption ?? null,
+    });
+    await this.postRepository.increment({ id: postId }, 'repost_count', 1);
+
+    const post = await this.postRepository.findOne({ where: { id: postId } });
+    this.eventEmitter.emit('post.reposted', { postId, repostCount: post!.repost_count, accountId });
+    return { reposted: true };
+  }
+
+  async toggleSave(postId: string, accountId: string) {
+    const existing = await this.savedPostRepository.findOne({
+      where: { post_id: postId, account_id: accountId },
+    });
+
+    if (existing) {
+      await this.savedPostRepository.delete(existing.id);
+      return { saved: false };
+    }
+
+    await this.savedPostRepository.save({ post_id: postId, account_id: accountId });
+    return { saved: true };
+  }
+
+  async findMyReposts(accountId: string, page = 1, limit = 10) {
+    const [data, total] = await this.postRepostRepository.findAndCount({
+      where: { account_id: accountId },
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+      relations: { post: { account: true, session: { photo: { frame: true }, room: true } } },
+    });
+
+    return { data, total, page, limit };
+  }
+
+  async findMySavedPosts(accountId: string, page = 1, limit = 10) {
+    const [data, total] = await this.savedPostRepository.findAndCount({
+      where: { account_id: accountId },
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+      relations: { post: { account: true, session: { photo: { frame: true }, room: true } } },
+    });
+
+    return { data, total, page, limit };
+  }
+
+  async getUserInteractions(accountId: string) {
+    const saved = await this.savedPostRepository.find({ select: { post_id: true }, where: { account_id: accountId } });
+    const reposted = await this.postRepostRepository.find({ select: { post_id: true }, where: { account_id: accountId } });
+    const liked = await this.postLikeRepository.find({ select: { post_id: true }, where: { account_id: accountId } });
+    
+    return {
+      savedPostIds: saved.map(s => s.post_id),
+      repostedPostIds: reposted.map(r => r.post_id),
+      likedPostIds: liked.map(l => l.post_id),
+    };
   }
 }

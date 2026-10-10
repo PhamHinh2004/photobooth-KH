@@ -19,6 +19,8 @@ import CapturePage from '../pages/capture/CapturePage'
 import FeedPage from '../pages/social/FeedPage'
 import PostDetailPage from '../pages/social/PostDetailPage'
 import MyPostsPage from '../pages/social/MyPostsPage'
+import MyRepostsPage from '../pages/social/MyRepostsPage'
+import MySavedPostsPage from '../pages/social/MySavedPostsPage'
 import PublicLayout from '../components/layouts/PublicLayout'
 import UserGuard from '../components/layouts/UserGuard'
 import GroupSetupPage from '../features/group-capture/pages/GroupSetupPage'
@@ -131,6 +133,14 @@ const routes: RouteObject[] = [
       {
         path: 'my-posts',
         element: <PublicLayout><MyPostsPage /></PublicLayout>,
+      },
+      {
+        path: 'me/reposts',
+        element: <PublicLayout><MyRepostsPage /></PublicLayout>,
+      },
+      {
+        path: 'me/saved',
+        element: <PublicLayout><MySavedPostsPage /></PublicLayout>,
       },
       // Group Capture
       {
