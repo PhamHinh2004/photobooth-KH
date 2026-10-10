@@ -107,6 +107,25 @@ export const socialApi = {
   },
   deletePost: async (id: string) => {
     const { data } = await axiosInstance.delete(`/posts/${id}`);
+  },
+  toggleRepost: async (postId: string, quoteCaption?: string) => {
+    const { data } = await axiosInstance.post(`/posts/${postId}/repost`, { quoteCaption });
+    return data;
+  },
+  toggleSave: async (postId: string) => {
+    const { data } = await axiosInstance.post(`/posts/${postId}/save`);
+    return data;
+  },
+  getMyReposts: async (page = 1, limit = 10) => {
+    const { data } = await axiosInstance.get(`/posts/me/reposts?page=${page}&limit=${limit}`);
+    return { ...data, data: await attachCustomerProfiles(data.data.map((item: any) => item.post) || []) };
+  },
+  getMySavedPosts: async (page = 1, limit = 10) => {
+    const { data } = await axiosInstance.get(`/posts/me/saved?page=${page}&limit=${limit}`);
+    return { ...data, data: await attachCustomerProfiles(data.data.map((item: any) => item.post) || []) };
+  },
+  getMyInteractions: async () => {
+    const { data } = await axiosInstance.get('/posts/me/interactions');
     return data;
   }
 };

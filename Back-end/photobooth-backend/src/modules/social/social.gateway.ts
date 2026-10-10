@@ -77,6 +77,17 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(`post:${payload.postId}`).emit('post:liked', payload);
   }
 
+  @OnEvent('post.reposted')
+  handlePostReposted(payload: { postId: string; repostCount: number; accountId: string }) {
+    this.server.to('feed').emit('post:reposted', payload);
+    this.server.to(`post:${payload.postId}`).emit('post:reposted', payload);
+  }
+
+  @OnEvent('post.unreposted')
+  handlePostUnreposted(payload: { postId: string; accountId: string }) {
+    this.server.to('feed').emit('post:unreposted', payload);
+  }
+
   @OnEvent('comment.created')
   handleCommentCreated(comment: any) {
     this.server.to(`post:${comment.post_id}`).emit('comment:created', comment);

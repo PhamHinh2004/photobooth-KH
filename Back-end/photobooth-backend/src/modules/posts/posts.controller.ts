@@ -16,6 +16,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger'
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { RepostDto } from './dto/repost.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
@@ -82,6 +83,42 @@ export class PostsController {
     return this.postsService.findUserPosts(userId, +page, +limit);
   }
 
+  @ApiOperation({ summary: 'Get current user reposts' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @Get('me/reposts')
+  getMyReposts(
+    @CurrentUser() user: { id: string },
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    return this.postsService.findMyReposts(user.id, +page, +limit);
+  }
+
+  @ApiOperation({ summary: 'Get current user saved posts' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @Get('me/saved')
+  getMySavedPosts(
+    @CurrentUser() user: { id: string },
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    return this.postsService.findMySavedPosts(user.id, +page, +limit);
+  }
+
+  @ApiOperation({ summary: 'Get current user interactions' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('me/interactions')
+  getMyInteractions(@CurrentUser() user: { id: string }) {
+    return this.postsService.getUserInteractions(user.id);
+  }
+
   @Public()
   @Get(':id/share')
   async sharePreview(@Param('id') id: string, @Res() response: Response) {
@@ -134,6 +171,29 @@ export class PostsController {
     @CurrentUser() user: { id: string },
   ) {
     return this.postsService.toggleLike(id, user.id);
+  }
+
+  @ApiOperation({ summary: 'Toggle repost on a post' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/repost')
+  toggleRepost(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string },
+    @Body() dto: RepostDto,
+  ) {
+    return this.postsService.toggleRepost(id, user.id, dto);
+  }
+
+  @ApiOperation({ summary: 'Toggle save on a post' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/save')
+  toggleSave(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.postsService.toggleSave(id, user.id);
   }
 
   @ApiOperation({ summary: 'Update a post' })

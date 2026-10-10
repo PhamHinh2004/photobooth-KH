@@ -48,6 +48,9 @@ export class Post {
   likes_count: number;
 
   @Column({ default: 0 })
+  repost_count: number;
+
+  @Column({ default: 0 })
   comments_count: number;
 
   @Column({ default: 0 })

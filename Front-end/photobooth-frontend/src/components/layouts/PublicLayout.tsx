@@ -5,6 +5,7 @@ import { message } from 'antd'
 import { useAuthStore } from '@/stores/auth.store'
 import { authApi } from '@/api/auth.api'
 import AiFrameAssistant from '@/components/assistant/AiFrameAssistant'
+import { useSocialStore } from '@/stores/social.store'
 
 interface PublicLayoutProps {
   children: React.ReactNode
@@ -18,11 +19,13 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatarUrl || null)
   const [avatarResolved, setAvatarResolved] = useState(!isAuthenticated)
   const isHome = location.pathname === '/'
+  const { fetchInteractions, clearInteractions } = useSocialStore()
 
   useEffect(() => {
     if (!isAuthenticated) {
       setAvatarUrl(null)
       setAvatarResolved(true)
+      clearInteractions()
       return
     }
 
@@ -40,6 +43,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
         if (active) {
           setAvatarUrl(profile.image)
           setAvatarResolved(true)
+          fetchInteractions()
           const currentUser = useAuthStore.getState().user
           if (currentUser && currentUser.avatarUrl !== profile.image) {
             setUser({ ...currentUser, avatarUrl: profile.image })
@@ -90,6 +94,18 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
       label: 'Quản lý bài viết',
       icon: <span className="material-symbols-outlined align-middle mr-2 text-[18px]">article</span>,
       onClick: () => navigate('/my-posts'),
+    },
+    {
+      key: 'reposts',
+      label: 'Bài đã đăng lại',
+      icon: <span className="material-symbols-outlined align-middle mr-2 text-[18px]">repeat</span>,
+      onClick: () => navigate('/me/reposts'),
+    },
+    {
+      key: 'saved',
+      label: 'Kho lưu của tôi',
+      icon: <span className="material-symbols-outlined align-middle mr-2 text-[18px]">bookmark</span>,
+      onClick: () => navigate('/me/saved'),
     },
     {
       key: 'change-password',
