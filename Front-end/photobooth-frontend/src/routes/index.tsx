@@ -15,6 +15,7 @@ import AccountDetailPage from '../pages/admin/AccountDetailPage'
 import CustomersPage from '../pages/admin/CustomersPage'
 import CustomerDetailPage from '../pages/admin/CustomerDetailPage'
 import ReviewsPage from '../pages/admin/ReviewsPage'
+import CreateFramePage from '../pages/admin/CreateFramePage'
 import CapturePage from '../pages/capture/CapturePage'
 import FeedPage from '../pages/social/FeedPage'
 import PostDetailPage from '../pages/social/PostDetailPage'
@@ -71,6 +72,10 @@ const routes: RouteObject[] = [
       {
         index: true,
         element: <Navigate to="/admin/accounts" replace />,
+      },
+      {
+        path: 'create-frame',
+        element: <CreateFramePage />,
       },
       {
         path: 'accounts',

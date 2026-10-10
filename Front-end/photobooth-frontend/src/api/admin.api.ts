@@ -6,4 +6,13 @@ export const adminApi = {
     const response = await axiosInstance.get<PaginatedResponse<AdminAccount>>('/admin/accounts', { params })
     return response.data
   },
+  
+  createFrame: async (data: FormData): Promise<any> => {
+    const response = await axiosInstance.post('/frames', data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
 }
