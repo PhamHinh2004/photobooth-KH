@@ -59,4 +59,23 @@ export class CommentsController {
   ) {
     return this.commentsService.remove(id, user.id);
   }
+
+  @ApiOperation({ summary: 'Toggle like a comment' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('comments/:id/like')
+  toggleLike(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.commentsService.toggleLike(id, user.id);
+  }
+
+  @ApiOperation({ summary: 'Get user liked comment ids' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('comments/my-likes')
+  getMyLikes(@CurrentUser() user: { id: string }) {
+    return this.commentsService.getMyLikedComments(user.id);
+  }
 }

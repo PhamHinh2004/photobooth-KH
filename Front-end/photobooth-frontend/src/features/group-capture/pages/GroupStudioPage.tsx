@@ -358,6 +358,7 @@ export default function GroupStudioPage() {
         if (localVideoRef.current) {
           await lk.localParticipant.setCameraEnabled(true);
           const attachTrack = () => {
+            if (!lk) return;
             const pub = lk.localParticipant.getTrackPublication(Track.Source.Camera);
             if (pub && pub.track && localVideoRef.current) {
               (pub.track as LocalVideoTrack).attach(localVideoRef.current);
