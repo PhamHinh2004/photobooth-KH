@@ -9,12 +9,20 @@ import {
   Heart,
   MessageCircle,
   Minimize2,
+  Maximize2,
   RefreshCw,
   Send,
   Sparkles,
   X,
+  Plus,
+  Trash2,
+  MoreHorizontal,
+  MessageSquare,
 } from 'lucide-react'
+import { Dropdown, Modal, message as antMessage } from 'antd'
 import axiosInstance from '@/api/axios'
+import { useAuthStore } from '@/stores/auth.store'
+import { chatboxApi, ChatSessionItem } from '@/api/chatbox.api'
 import type { Frame } from '@/types/capture.types'
 import './AiFrameAssistant.css'
 
@@ -95,16 +103,155 @@ function getPostAuthor(post: AssistantPost) {
 }
 
 function formatCount(value?: number) {
-  return new Intl.NumberFormat('vi-VN').format(value ?? 0)
+  return new Intl.NumberFormat('vi-VN').format(value ?? 0);
+}
+
+function renderInlineText(text: string) {
+  const cleaned = text.replace(/<br\s*\/?>/gi, ' ').replace(/<\/?b>/gi, '**');
+  const parts = cleaned.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={idx}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
+function FormattedAiBubble({ text }: { text: string }) {
+  const rawLines = text.split('\n');
+  const blocks: React.ReactNode[] = [];
+  let currentList: string[] = [];
+
+  const flushList = (keyPrefix: string) => {
+    if (currentList.length > 0) {
+      blocks.push(
+        <ul className="ai-bubble-list" key={`${keyPrefix}-list-${blocks.length}`}>
+          {currentList.map((item, i) => (
+            <li key={i} className="ai-bubble-list-item">
+              <span className="ai-bullet-dot">•</span>
+              <span>{renderInlineText(item)}</span>
+            </li>
+          ))}
+        </ul>
+      );
+      currentList = [];
+    }
+  };
+
+  rawLines.forEach((rawLine, lineIdx) => {
+    let line = rawLine.trim();
+
+    // Bỏ qua dòng phân cách bảng markdown |---|---|
+    if (/^\|[\s\-:|]+\|$/.test(line)) {
+      return;
+    }
+
+    // Xử lý dòng bảng thô (| Slot | Pose | ... |)
+    if (line.startsWith('|') && line.endsWith('|')) {
+      flushList(`line-${lineIdx}`);
+      const cells = line
+        .slice(1, -1)
+        .split('|')
+        .map((c) => c.trim())
+        .filter(Boolean);
+
+      // Bỏ qua header bảng
+      if (cells.some((c) => /slot|pose|hướng dẫn|thời gian/i.test(c))) {
+        return;
+      }
+
+      if (cells.length >= 2) {
+        const titleCell = cells[0];
+        const detailCell = cells.slice(1).join(' · ');
+        blocks.push(
+          <div className="ai-shot-card" key={`table-row-${lineIdx}`}>
+            <div className="ai-shot-title">
+              📸 {renderInlineText(titleCell)}
+            </div>
+            <div className="ai-shot-desc">
+              {renderInlineText(detailCell)}
+            </div>
+          </div>
+        );
+        return;
+      }
+    }
+
+    if (!line) {
+      flushList(`line-${lineIdx}`);
+      return;
+    }
+
+    // Tiêu đề (### hoặc ##)
+    if (line.startsWith('###') || line.startsWith('##') || line.startsWith('#')) {
+      flushList(`line-${lineIdx}`);
+      const cleanHeading = line.replace(/^#+\s*/, '');
+      blocks.push(
+        <h4 className="ai-heading-block" key={`h-${lineIdx}`}>
+          <Sparkles size={13} className="ai-heading-icon" />
+          <span>{renderInlineText(cleanHeading)}</span>
+        </h4>
+      );
+      return;
+    }
+
+    // Thẻ Shot
+    if (/^(?:📸\s*)?Shot\s*\d+/i.test(line) || /^[1-8]️⃣/i.test(line)) {
+      flushList(`line-${lineIdx}`);
+      blocks.push(
+        <div className="ai-shot-card" key={`shot-${lineIdx}`}>
+          <div className="ai-shot-title">
+            <span>{renderInlineText(line)}</span>
+          </div>
+        </div>
+      );
+      return;
+    }
+
+    // Mẹo / Tip callout
+    if (/^(?:💡|\*|\-)?\s*(?:mẹo|tip|lưu ý):/i.test(line)) {
+      flushList(`line-${lineIdx}`);
+      blocks.push(
+        <div className="ai-tip-box" key={`tip-${lineIdx}`}>
+          <span className="ai-tip-badge">💡 MẸO</span>
+          <span>{renderInlineText(line.replace(/^(?:💡|\*|\-)?\s*(?:mẹo|tip|lưu ý):\s*/i, ''))}</span>
+        </div>
+      );
+      return;
+    }
+
+    // Gạch đầu dòng: - hoặc • hoặc *
+    if (/^[-*•]\s+/.test(line)) {
+      const cleanItem = line.replace(/^[-*•]\s+/, '');
+      currentList.push(cleanItem);
+      return;
+    }
+
+    // Đoạn văn thông thường
+    flushList(`line-${lineIdx}`);
+    blocks.push(
+      <p className="ai-bubble-paragraph" key={`p-${lineIdx}`}>
+        {renderInlineText(line)}
+      </p>
+    );
+  });
+
+  flushList('end');
+
+  return <div className="ai-formatted-text">{blocks}</div>;
 }
 
 export default function AiFrameAssistant() {
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuthStore()
   const [isOpen, setIsOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [sessions, setSessions] = useState<ChatSessionItem[]>([])
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+  const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false)
   const [data, setData] = useState<AssistantData>({ frames: [], posts: [], frameError: false, postError: false })
   const [messages, setMessages] = useState<AssistantMessage[]>([
     makeMessage({
@@ -114,6 +261,117 @@ export default function AiFrameAssistant() {
   ])
   const didLoad = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  async function loadSessions() {
+    if (!isAuthenticated) return
+    try {
+      const sessionList = await chatboxApi.getSessions()
+      setSessions(sessionList)
+      if (sessionList.length > 0 && !currentSessionId) {
+        await selectSession(sessionList[0].id)
+      }
+    } catch (e) {
+      console.error('Lỗi tải danh sách phiên chat:', e)
+    }
+  }
+
+  async function selectSession(sessionId: string) {
+    setCurrentSessionId(sessionId)
+    setIsLoading(true)
+    try {
+      const sessionData = await chatboxApi.getSession(sessionId)
+      if (sessionData && sessionData.messages && sessionData.messages.length > 0) {
+        const loaded: AssistantMessage[] = sessionData.messages.map((m) => ({
+          id: m.id,
+          role: m.role,
+          text: m.content,
+          ...(m.metadata || {}),
+        }))
+        setMessages(loaded)
+      } else {
+        setMessages([
+          makeMessage({
+            role: 'assistant',
+            text: 'Chào bạn, mình là KH AI Studio. Hãy đặt câu hỏi để mình gợi ý nhé!',
+          }),
+        ])
+      }
+    } catch (e) {
+      console.error('Lỗi khi mở phiên chat:', e)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  async function handleCreateNewSession() {
+    if (isAuthenticated) {
+      try {
+        const newSession = await chatboxApi.createSession('Cuộc trò chuyện mới')
+        setSessions((prev) => [newSession, ...prev])
+        setCurrentSessionId(newSession.id)
+      } catch (e) {
+        console.error('Lỗi tạo phiên mới:', e)
+      }
+    } else {
+      setCurrentSessionId(null)
+    }
+    setMessages([
+      makeMessage({
+        role: 'assistant',
+        text: 'Chào bạn, mình là KH AI Studio. Mình có thể gợi ý frame theo số ảnh, cho biết kích thước/layout và tổng hợp bài viết đang có nhiều tương tác.',
+      }),
+    ])
+  }
+
+  async function handleDeleteSingleSession(e: React.MouseEvent, sessionId: string) {
+    e.stopPropagation()
+    try {
+      await chatboxApi.deleteSession(sessionId)
+      const remaining = sessions.filter((s) => s.id !== sessionId)
+      setSessions(remaining)
+      antMessage.success('Đã xóa đoạn hội thoại')
+      if (currentSessionId === sessionId) {
+        if (remaining.length > 0) {
+          void selectSession(remaining[0].id)
+        } else {
+          void handleCreateNewSession()
+        }
+      }
+    } catch (e) {
+      antMessage.error('Không thể xóa đoạn hội thoại')
+    }
+  }
+
+  async function handleDeleteAllSessions() {
+    try {
+      await chatboxApi.deleteAllSessions()
+      setSessions([])
+      setCurrentSessionId(null)
+      setIsClearAllModalOpen(false)
+      setMessages([
+        makeMessage({
+          role: 'assistant',
+          text: 'Đã xóa toàn bộ lịch sử trò chuyện. Bạn có thể bắt đầu cuộc trò chuyện mới!',
+        }),
+      ])
+      antMessage.success('Đã xóa toàn bộ lịch sử')
+    } catch (e) {
+      antMessage.error('Không thể xóa toàn bộ lịch sử')
+    }
+  }
+
+  async function handleDeleteSingleMessage(msgId: string) {
+    try {
+      if (isAuthenticated) {
+        await chatboxApi.deleteMessage(msgId)
+      }
+      setMessages((prev) => prev.filter((m) => m.id !== msgId))
+      antMessage.success('Đã xóa tin nhắn')
+    } catch (e) {
+      setMessages((prev) => prev.filter((m) => m.id !== msgId))
+      antMessage.success('Đã xóa tin nhắn')
+    }
+  }
 
   async function loadReferenceData() {
     setIsRefreshing(true)
@@ -141,7 +399,8 @@ export default function AiFrameAssistant() {
 
   useEffect(() => {
     if (isOpen && !didLoad.current) void loadReferenceData()
-  }, [isOpen])
+    if (isOpen && isAuthenticated) void loadSessions()
+  }, [isOpen, isAuthenticated])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
@@ -268,11 +527,67 @@ export default function AiFrameAssistant() {
     setMessages((current) => [...current, makeMessage({ role: 'user', text: query })])
     setIsLoading(true)
 
-    const referenceData = didLoad.current ? data : await loadReferenceData()
-    const postAnswer = createPostAnswer(query, referenceData)
-    const answer = postAnswer || createFrameAnswer(query, referenceData)
-    setMessages((current) => [...current, answer])
-    setIsLoading(false)
+    try {
+      // 1. Kiểm tra nếu câu hỏi thuần về tìm bài viết/bài đăng cộng đồng (local feed ranking)
+      const isPostQuery = /bai viet|bai dang|luot tim|luot xem|binh luan/.test(normalizeText(query))
+      if (isPostQuery) {
+        const referenceData = didLoad.current ? data : await loadReferenceData()
+        const postAnswer = createPostAnswer(query, referenceData)
+        if (postAnswer) {
+          setMessages((current) => [...current, postAnswer])
+          setIsLoading(false)
+          return
+        }
+      }
+
+      // 2. Gửi câu hỏi đến Backend AI Model (Gemini / Groq / Fallback Engine)
+      const chatHistory = messages.slice(-6).map((m) => ({
+        role: m.role,
+        content: m.text,
+      }))
+
+      const response = await chatboxApi.sendMessage({
+        message: query,
+        sessionId: currentSessionId || undefined,
+        history: chatHistory,
+      })
+
+      if (response && response.reply) {
+        if (response.sessionId) {
+          if (response.sessionId !== currentSessionId) {
+            setCurrentSessionId(response.sessionId)
+          }
+          void loadSessions()
+        }
+        const providerLabel = response.modelUsed ? ` · ${response.modelUsed}` : ''
+        setMessages((current) => [
+          ...current,
+          {
+            id: response.assistantMessageId || makeMessage({ role: 'assistant', text: '' }).id,
+            role: 'assistant',
+            text: response.reply,
+            note: response.provider ? `Xử lý bởi AI: ${response.provider}${providerLabel}` : undefined,
+          },
+        ])
+      } else {
+        throw new Error('Không nhận được câu trả lời từ AI')
+      }
+    } catch (error: any) {
+      console.error('Lỗi gọi AI Chatbox:', error)
+      const errorMsg = error?.code === 'ECONNABORTED'
+        ? 'Thời gian chờ AI phản hồi quá lâu (Timeout). Bạn vui lòng thử lại nhé!'
+        : 'Không thể kết nối đến Trợ lý AI. Bạn hãy thử kiểm tra lại kết nối mạng hoặc thử lại sau nhé!'
+      setMessages((current) => [
+        ...current,
+        makeMessage({
+          role: 'assistant',
+          text: errorMsg,
+          note: 'Lỗi kết nối Trợ lý AI',
+        }),
+      ])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -299,96 +614,253 @@ export default function AiFrameAssistant() {
           <header className="ai-assistant-header">
             <div className="ai-assistant-brandmark"><Bot size={21} strokeWidth={2.2} /><span className="ai-assistant-online-dot" /></div>
             <div className="ai-assistant-heading">
-              <div className="ai-assistant-title-row"><strong>KH AI Studio</strong><span className="ai-assistant-version">FRAME GUIDE</span></div>
-              <span className="ai-assistant-presence">Trợ lý frame · Đang sẵn sàng</span>
+              <div className="ai-assistant-title-row"><strong>KH AI Studio</strong><span className="ai-assistant-version">GEMINI AI</span></div>
+              <span className="ai-assistant-presence">AI Stylist &amp; Photobooth Copilot · Sẵn sàng</span>
             </div>
             <div className="ai-assistant-header-actions">
-              <button type="button" onClick={clearConversation} title="Cuộc trò chuyện mới" aria-label="Cuộc trò chuyện mới" className="ai-assistant-icon-button"><RefreshCw size={15} /></button>
-              <button type="button" onClick={() => setIsExpanded((value) => !value)} title={isExpanded ? 'Thu gọn' : 'Mở rộng'} aria-label={isExpanded ? 'Thu gọn' : 'Mở rộng'} className="ai-assistant-icon-button ai-assistant-expand"><Minimize2 size={16} /></button>
+              <button
+                type="button"
+                onClick={() => void handleCreateNewSession()}
+                title="Tạo hội thoại mới"
+                aria-label="Tạo hội thoại mới"
+                className="ai-assistant-icon-button"
+              >
+                <Plus size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsExpanded((value) => !value)}
+                title={isExpanded ? 'Thu gọn (Ẩn danh sách)' : 'Mở rộng (Xem các đoạn hội thoại)'}
+                aria-label={isExpanded ? 'Thu gọn' : 'Mở rộng'}
+                className="ai-assistant-icon-button ai-assistant-expand"
+              >
+                {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              </button>
               <button type="button" onClick={() => setIsOpen(false)} title="Đóng chat" aria-label="Đóng chat" className="ai-assistant-icon-button"><X size={19} /></button>
             </div>
           </header>
 
-          <div className="ai-assistant-context"><Sparkles size={14} /><span>PHÂN TÍCH FRAME &amp; ĐÁNH GIÁ</span><button type="button" onClick={() => void loadReferenceData()} disabled={isRefreshing} aria-label="Làm mới dữ liệu" title="Làm mới dữ liệu"><RefreshCw size={13} className={isRefreshing ? 'ai-assistant-spin' : ''} /></button></div>
+          <div className="ai-assistant-body">
+            {/* Sidebar danh sách đoạn hội thoại bên trái (khi mở rộng) */}
+            {isExpanded && (
+              <aside className="ai-assistant-sidebar">
+                <div className="ai-assistant-sidebar-header">
+                  <button
+                    type="button"
+                    className="ai-assistant-new-chat-btn"
+                    onClick={() => void handleCreateNewSession()}
+                  >
+                    <Plus size={14} /> Đoạn chat mới
+                  </button>
+                </div>
 
-          <div className="ai-assistant-messages" ref={scrollRef} aria-live="polite">
-            {messages.map((message) => (
-              <div key={message.id} className={`ai-assistant-message ai-assistant-message--${message.role}`}>
-                {message.role === 'assistant' && <div className="ai-assistant-avatar"><Sparkles size={15} fill="currentColor" /></div>}
-                <div className="ai-assistant-message-content">
-                  <p className="ai-assistant-bubble">{message.text}</p>
-                  {message.frames && (
-                    <div className="ai-assistant-result-list">
-                      {message.frames.map((frame, index) => (
-                        <article className="ai-assistant-frame-card" key={frame.id}>
-                          <img src={frame.thumbnail_url || frame.image_url} alt={frame.name} />
-                          <div className="ai-assistant-card-copy">
-                            <div className="ai-assistant-card-title"><span className="ai-assistant-rank">{index === 0 ? 'GỢI Ý' : `#${index + 1}`}</span><strong>{frame.name}</strong></div>
-                            <span>{getFrameSlots(frame)} ảnh · {frame.width && frame.height ? `${frame.width} × ${frame.height} px` : frame.aspect_ratio || 'Kích thước chưa cập nhật'}</span>
-                            <span className="ai-assistant-card-meta"><span className="ai-assistant-stars">★</span> {(frame.rating ?? 0).toFixed(1)} <span>·</span> {formatCount(frame.rating_count)} đánh giá{frame.usage_count ? ` · ${formatCount(frame.usage_count)} lượt dùng` : ''}</span>
+                <div className="ai-assistant-sidebar-list">
+                  {isAuthenticated ? (
+                    sessions.length > 0 ? (
+                      sessions.map((s) => (
+                        <div
+                          key={s.id}
+                          className={`ai-assistant-session-item${s.id === currentSessionId ? ' ai-assistant-session-item--active' : ''}`}
+                          onClick={() => void selectSession(s.id)}
+                        >
+                          <div className="ai-assistant-session-info">
+                            <MessageSquare size={13} className="shrink-0 text-slate-400" />
+                            <span className="ai-assistant-session-title" title={s.title}>
+                              {s.title || 'Cuộc trò chuyện'}
+                            </span>
                           </div>
-                          <button type="button" className="ai-assistant-card-action" onClick={() => startCapture(frame)} aria-label={`Chọn frame ${frame.name}`} title="Chọn frame"><ChevronRight size={18} /></button>
-                        </article>
-                      ))}
-                      {message.note && <p className="ai-assistant-data-note">{message.note}</p>}
+                          <div className="ai-assistant-session-actions">
+                            <button
+                              type="button"
+                              className="ai-assistant-session-delete-btn"
+                              title="Xóa đoạn hội thoại"
+                              onClick={(e) => void handleDeleteSingleSession(e, s.id)}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-xs text-slate-400">
+                        Chưa có lịch sử hội thoại nào
+                      </div>
+                    )
+                  ) : (
+                    <div className="p-3 text-center text-xs text-slate-500">
+                      <p className="mb-2">Đăng nhập để đồng bộ lịch sử hội thoại</p>
+                      <button
+                        type="button"
+                        className="rounded bg-sky-600 px-2 py-1 text-xs text-white cursor-pointer"
+                        onClick={() => navigate('/login')}
+                      >
+                        Đăng nhập ngay
+                      </button>
                     </div>
                   )}
-                  {message.posts && message.metric && (
-                    <div className="ai-assistant-result-list">
-                      {message.posts.map((post, index) => {
-                        const metric = message.metric ?? 'likes_count'
-                        const MetricIcon = metric === 'views_count' ? Eye : metric === 'comments_count' ? MessageCircle : Heart
-                        return (
-                          <button type="button" className="ai-assistant-post-card" key={post.id} onClick={() => navigate(`/reviews/${post.id}`)}>
-                            <img src={post.cover_image_url || 'https://placehold.co/80x80/e9eef0/445?text=KH'} alt="Ảnh bài đánh giá" />
-                            <span className="ai-assistant-post-copy"><strong><span className="ai-assistant-rank">#{index + 1}</span> {getPostAuthor(post)}</strong><span>{post.caption || 'Bài đánh giá của cộng đồng KH Booth'}</span><span className="ai-assistant-post-metric"><MetricIcon size={13} /> {formatCount(post[metric])} {metric === 'views_count' ? 'lượt xem' : metric === 'comments_count' ? 'bình luận' : 'lượt tim'}</span></span>
-                            <ChevronRight size={17} className="ai-assistant-post-arrow" />
-                          </button>
-                        )
-                      })}
-                      {message.note && <p className="ai-assistant-data-note">{message.note}</p>}
-                    </div>
-                  )}
-                  {message.postRankings && (
-                    <div className="ai-assistant-result-list">
-                      {message.postRankings.map(({ metric, posts }) => {
-                        const MetricIcon = metric === 'views_count' ? Eye : metric === 'comments_count' ? MessageCircle : Heart
-                        const metricLabel = metric === 'views_count' ? 'Lượt xem' : metric === 'comments_count' ? 'Bình luận' : 'Lượt tim'
-                        return (
-                          <section className="ai-assistant-ranking-group" key={metric}>
-                            <h4><MetricIcon size={13} /> {metricLabel}</h4>
-                            {posts.map((post, index) => (
+                </div>
+
+                {isAuthenticated && sessions.length > 0 && (
+                  <div className="ai-assistant-sidebar-footer">
+                    <button
+                      type="button"
+                      className="ai-assistant-clear-all-btn"
+                      onClick={() => setIsClearAllModalOpen(true)}
+                    >
+                      <Trash2 size={13} /> Xóa toàn bộ lịch sử
+                    </button>
+                  </div>
+                )}
+              </aside>
+            )}
+
+            {/* Khung chat chính bên phải */}
+            <main className="ai-assistant-main">
+              <div className="ai-assistant-context">
+                <Sparkles size={14} />
+                <span>PHÂN TÍCH FRAME &amp; ĐÁNH GIÁ</span>
+                <button type="button" onClick={() => void loadReferenceData()} disabled={isRefreshing} aria-label="Làm mới dữ liệu" title="Làm mới dữ liệu">
+                  <RefreshCw size={13} className={isRefreshing ? 'ai-assistant-spin' : ''} />
+                </button>
+              </div>
+
+              <div className="ai-assistant-messages" ref={scrollRef} aria-live="polite">
+                {messages.map((message) => (
+                  <div key={message.id} className={`ai-assistant-message ai-assistant-message--${message.role}`}>
+                    {message.role === 'assistant' && <div className="ai-assistant-avatar"><Sparkles size={15} fill="currentColor" /></div>}
+                    <div className="ai-assistant-message-content">
+                      <div className="ai-assistant-bubble">
+                        {message.role === 'assistant' ? (
+                          <FormattedAiBubble text={message.text} />
+                        ) : (
+                          message.text
+                        )}
+                      </div>
+                      {message.frames && (
+                        <div className="ai-assistant-result-list">
+                          {message.frames.map((frame, index) => (
+                            <article className="ai-assistant-frame-card" key={frame.id}>
+                              <img src={frame.thumbnail_url || frame.image_url} alt={frame.name} />
+                              <div className="ai-assistant-card-copy">
+                                <div className="ai-assistant-card-title"><span className="ai-assistant-rank">{index === 0 ? 'GỢI Ý' : `#${index + 1}`}</span><strong>{frame.name}</strong></div>
+                                <span>{getFrameSlots(frame)} ảnh · {frame.width && frame.height ? `${frame.width} × ${frame.height} px` : frame.aspect_ratio || 'Kích thước chưa cập nhật'}</span>
+                                <span className="ai-assistant-card-meta"><span className="ai-assistant-stars">★</span> {(frame.rating ?? 0).toFixed(1)} <span>·</span> {formatCount(frame.rating_count)} đánh giá{frame.usage_count ? ` · ${formatCount(frame.usage_count)} lượt dùng` : ''}</span>
+                              </div>
+                              <button type="button" className="ai-assistant-card-action" onClick={() => startCapture(frame)} aria-label={`Chọn frame ${frame.name}`} title="Chọn frame"><ChevronRight size={18} /></button>
+                            </article>
+                          ))}
+                          {message.note && <p className="ai-assistant-data-note">{message.note}</p>}
+                        </div>
+                      )}
+                      {message.posts && message.metric && (
+                        <div className="ai-assistant-result-list">
+                          {message.posts.map((post, index) => {
+                            const metric = message.metric ?? 'likes_count'
+                            const MetricIcon = metric === 'views_count' ? Eye : metric === 'comments_count' ? MessageCircle : Heart
+                            return (
                               <button type="button" className="ai-assistant-post-card" key={post.id} onClick={() => navigate(`/reviews/${post.id}`)}>
                                 <img src={post.cover_image_url || 'https://placehold.co/80x80/e9eef0/445?text=KH'} alt="Ảnh bài đánh giá" />
                                 <span className="ai-assistant-post-copy"><strong><span className="ai-assistant-rank">#{index + 1}</span> {getPostAuthor(post)}</strong><span>{post.caption || 'Bài đánh giá của cộng đồng KH Booth'}</span><span className="ai-assistant-post-metric"><MetricIcon size={13} /> {formatCount(post[metric])} {metric === 'views_count' ? 'lượt xem' : metric === 'comments_count' ? 'bình luận' : 'lượt tim'}</span></span>
                                 <ChevronRight size={17} className="ai-assistant-post-arrow" />
                               </button>
-                            ))}
-                          </section>
-                        )
-                      })}
-                      {message.note && <p className="ai-assistant-data-note">{message.note}</p>}
+                            )
+                          })}
+                          {message.note && <p className="ai-assistant-data-note">{message.note}</p>}
+                        </div>
+                      )}
+                      {message.postRankings && (
+                        <div className="ai-assistant-result-list">
+                          {message.postRankings.map(({ metric, posts }) => {
+                            const MetricIcon = metric === 'views_count' ? Eye : metric === 'comments_count' ? MessageCircle : Heart
+                            const metricLabel = metric === 'views_count' ? 'Lượt xem' : metric === 'comments_count' ? 'Bình luận' : 'Lượt tim'
+                            return (
+                              <section className="ai-assistant-ranking-group" key={metric}>
+                                <h4><MetricIcon size={13} /> {metricLabel}</h4>
+                                {posts.map((post, index) => (
+                                  <button type="button" className="ai-assistant-post-card" key={post.id} onClick={() => navigate(`/reviews/${post.id}`)}>
+                                    <img src={post.cover_image_url || 'https://placehold.co/80x80/e9eef0/445?text=KH'} alt="Ảnh bài đánh giá" />
+                                    <span className="ai-assistant-post-copy"><strong><span className="ai-assistant-rank">#{index + 1}</span> {getPostAuthor(post)}</strong><span>{post.caption || 'Bài đánh giá của cộng đồng KH Booth'}</span><span className="ai-assistant-post-metric"><MetricIcon size={13} /> {formatCount(post[metric])} {metric === 'views_count' ? 'lượt xem' : metric === 'comments_count' ? 'bình luận' : 'lượt tim'}</span></span>
+                                    <ChevronRight size={17} className="ai-assistant-post-arrow" />
+                                  </button>
+                                ))}
+                              </section>
+                            )
+                          })}
+                          {message.note && <p className="ai-assistant-data-note">{message.note}</p>}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+
+                    {/* Di chuột tới 3 chấm và bấm xóa tin nhắn */}
+                    <div className="ai-assistant-message-actions">
+                      <Dropdown
+                        menu={{
+                          items: [
+                            {
+                              key: 'delete-msg',
+                              danger: true,
+                              icon: <Trash2 size={13} />,
+                              label: 'Xóa tin nhắn',
+                              onClick: () => void handleDeleteSingleMessage(message.id),
+                            },
+                          ],
+                        }}
+                        trigger={['click']}
+                        placement={message.role === 'user' ? 'bottomLeft' : 'bottomRight'}
+                      >
+                        <button
+                          type="button"
+                          className="ai-assistant-dot-btn"
+                          title="Tùy chọn tin nhắn"
+                          aria-label="Tùy chọn tin nhắn"
+                        >
+                          <MoreHorizontal size={13} />
+                        </button>
+                      </Dropdown>
+                    </div>
+                  </div>
+                ))}
+                {isLoading && (
+                  <div className="ai-assistant-thinking">
+                    <span />
+                    <span />
+                    <span />
+                    <small>AI đang suy nghĩ và phân tích kịch bản...</small>
+                  </div>
+                )}
               </div>
-            ))}
-            {isLoading && <div className="ai-assistant-thinking"><span /><span /><span /><small>Đang tra cứu dữ liệu...</small></div>}
+
+              {messages.length <= 2 && (
+                <div className="ai-assistant-prompts" aria-label="Câu hỏi gợi ý">
+                  {QUICK_PROMPTS.map(({ label, icon: Icon, prompt }) => (
+                    <button type="button" key={label} onClick={() => void handleSend(prompt)}><Icon size={13} />{label}</button>
+                  ))}
+                </div>
+              )}
+
+              <form className="ai-assistant-composer" onSubmit={handleSubmit}>
+                <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Hỏi về frame, số ảnh, kích thước..." aria-label="Nhập câu hỏi cho KH AI Studio" />
+                <button type="submit" disabled={!input.trim() || isLoading} aria-label="Gửi câu hỏi" title="Gửi"><Send size={17} /></button>
+              </form>
+              <footer className="ai-assistant-footer"><span><span className="ai-assistant-footer-dot" /> Kết nối dữ liệu studio</span><span>KH AI · FE Preview</span></footer>
+            </main>
           </div>
 
-          {messages.length <= 2 && (
-            <div className="ai-assistant-prompts" aria-label="Câu hỏi gợi ý">
-              {QUICK_PROMPTS.map(({ label, icon: Icon, prompt }) => (
-                <button type="button" key={label} onClick={() => void handleSend(prompt)}><Icon size={13} />{label}</button>
-              ))}
-            </div>
-          )}
-
-          <form className="ai-assistant-composer" onSubmit={handleSubmit}>
-            <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Hỏi về frame, số ảnh, kích thước..." aria-label="Nhập câu hỏi cho KH AI Studio" />
-            <button type="submit" disabled={!input.trim() || isLoading} aria-label="Gửi câu hỏi" title="Gửi"><Send size={17} /></button>
-          </form>
-          <footer className="ai-assistant-footer"><span><span className="ai-assistant-footer-dot" /> Kết nối dữ liệu studio</span><span>KH AI · FE Preview</span></footer>
+          {/* Modal xác nhận xóa toàn bộ */}
+          <Modal
+            title="Xóa toàn bộ lịch sử trò chuyện?"
+            open={isClearAllModalOpen}
+            onOk={() => void handleDeleteAllSessions()}
+            onCancel={() => setIsClearAllModalOpen(false)}
+            okText="Xóa tất cả"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+            centered
+          >
+            <p className="text-sm text-slate-600">
+              Bạn có chắc chắn muốn xóa toàn bộ lịch sử các cuộc hội thoại không? Thao tác này sẽ xóa vĩnh viễn tất cả tin nhắn trên tài khoản của bạn.
+            </p>
+          </Modal>
         </section>
       )}
 

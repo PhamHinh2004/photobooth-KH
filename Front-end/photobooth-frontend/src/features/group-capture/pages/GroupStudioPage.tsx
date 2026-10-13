@@ -387,7 +387,7 @@ export default function GroupStudioPage() {
 
   if (phase === 'editing' && postProduction) {
     return (
-      <main className="mx-auto min-h-screen w-full max-w-7xl px-4 py-6 sm:px-6">
+      <main className="mx-auto min-h-screen w-full max-w-7xl px-4 pb-6 pt-24 sm:px-6 md:pt-28">
         <FilterScreen
           photos={[postProduction.photoUrl]}
           frame={postProduction.frame}
@@ -422,7 +422,7 @@ export default function GroupStudioPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-8 relative">
+    <div className="max-w-5xl mx-auto p-4 md:p-8 pt-24 md:pt-28 relative">
       <div className="flex justify-between items-center mb-4">
         <Title level={3} className="!m-0">Buồng Chụp Trực Tuyến</Title>
         <div className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full font-bold">

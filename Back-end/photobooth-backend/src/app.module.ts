@@ -24,6 +24,7 @@ import { SocialModule } from './modules/social/social.module';
 import { RoomsModule } from './modules/rooms/rooms.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { ChatboxModule } from './modules/chatbox/chatbox.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     RedisModule,
     RoomsModule,
     NotificationsModule,
+    ChatboxModule,
   ],
   controllers: [AppController],
   providers: [AppService],

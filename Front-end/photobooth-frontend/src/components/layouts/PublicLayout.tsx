@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Dropdown, type MenuProps } from 'antd'
+import { Dropdown, Modal, type MenuProps } from 'antd'
 import { message } from 'antd'
 import { useAuthStore } from '@/stores/auth.store'
 import { authApi } from '@/api/auth.api'
@@ -83,6 +83,17 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
     }
   }
 
+  const confirmLogout = () => {
+    Modal.confirm({
+      title: 'Xác nhận đăng xuất',
+      content: 'Bạn có chắc chắn muốn đăng xuất không?',
+      okText: 'Đăng xuất',
+      cancelText: 'Ở lại',
+      okButtonProps: { danger: true },
+      onOk: handleLogout,
+    })
+  }
+
   const accountMenuItems: MenuProps['items'] = [
     {
       key: 'profile',
@@ -97,15 +108,9 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
       onClick: () => navigate('/my-posts'),
     },
     {
-      key: 'reposts',
-      label: 'Bài đã đăng lại',
-      icon: <span className="material-symbols-outlined align-middle mr-2 text-[18px]">repeat</span>,
-      onClick: () => navigate('/me/reposts'),
-    },
-    {
       key: 'saved',
-      label: 'Kho lưu của tôi',
-      icon: <span className="material-symbols-outlined align-middle mr-2 text-[18px]">bookmark</span>,
+      label: 'Bộ sưu tập',
+      icon: <span className="material-symbols-outlined align-middle mr-2 text-[18px]">collections_bookmark</span>,
       onClick: () => navigate('/me/saved'),
     },
     {
@@ -119,7 +124,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
       label: 'Đăng xuất',
       danger: true,
       icon: <span className="material-symbols-outlined align-middle mr-2 text-[18px]">logout</span>,
-      onClick: handleLogout,
+      onClick: confirmLogout,
     },
   ]
 

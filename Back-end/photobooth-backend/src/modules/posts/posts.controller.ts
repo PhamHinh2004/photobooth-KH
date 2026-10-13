@@ -107,8 +107,51 @@ export class PostsController {
     @CurrentUser() user: { id: string },
     @Query('page') page = 1,
     @Query('limit') limit = 10,
+    @Query('collectionId') collectionId?: string,
   ) {
-    return this.postsService.findMySavedPosts(user.id, +page, +limit);
+    return this.postsService.findMySavedPosts(user.id, +page, +limit, collectionId);
+  }
+
+  @ApiOperation({ summary: 'Get current user saved collections' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('me/collections')
+  getMySavedCollections(@CurrentUser() user: { id: string }) {
+    return this.postsService.findMySavedCollections(user.id);
+  }
+
+  @ApiOperation({ summary: 'Create a saved collection' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('me/collections')
+  createSavedCollection(
+    @CurrentUser() user: { id: string },
+    @Body('name') name: string,
+  ) {
+    return this.postsService.createSavedCollection(user.id, name);
+  }
+
+  @ApiOperation({ summary: 'Delete a saved collection' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete('me/collections/:collectionId')
+  deleteSavedCollection(
+    @CurrentUser() user: { id: string },
+    @Param('collectionId') collectionId: string,
+  ) {
+    return this.postsService.deleteSavedCollection(user.id, collectionId);
+  }
+
+  @ApiOperation({ summary: 'Assign a saved post to a collection' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/saved/:postId/collection')
+  setSavedPostCollection(
+    @CurrentUser() user: { id: string },
+    @Param('postId') postId: string,
+    @Body('collectionId') collectionId: string | null,
+  ) {
+    return this.postsService.setSavedPostCollection(user.id, postId, collectionId);
   }
 
   @ApiOperation({ summary: 'Get current user interactions' })

@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { DiscussionSection } from './DiscussionSection';
 import { LikeButton } from './LikeButton';
 import { useNavigate } from 'react-router-dom';
-import { Download, Bookmark, Share2, Maximize2, Users, UserRound, ArrowLeft, MessageCircle } from 'lucide-react';
+import { Download, Share2, Maximize2, Users, UserRound, ArrowLeft, MessageCircle } from 'lucide-react';
 import { sharePostToFacebook } from '../../utils/facebookShare';
+import { SaveButton } from './SaveButton';
+import { useSocialStore } from '../../stores/social.store';
 
 interface PostDetailLayoutProps {
   post: any;
@@ -31,6 +33,7 @@ const formatRelativeTime = (dateString: string) => {
 
 export function PostDetailLayout({ post, onCommentDeleted }: PostDetailLayoutProps) {
   const navigate = useNavigate();
+  const { savedPostIds } = useSocialStore();
   const [shareMessage, setShareMessage] = useState('');
   const frame = post.session?.photo?.frame;
   const isGroupCapture = post.session?.session_type === 'group';
@@ -158,10 +161,9 @@ export function PostDetailLayout({ post, onCommentDeleted }: PostDetailLayoutPro
             <Download size={20} className="text-zinc-400" />
             <span className="text-[12px] font-bold">Tải HD (PNG)</span>
           </button>
-          <button className="flex flex-col items-center justify-center gap-1 py-3 bg-pink-50 rounded-xl border border-pink-100 hover:bg-pink-100 text-pink-600">
-            <Bookmark size={20} className="fill-current" />
-            <span className="text-[12px] font-bold">Lưu</span>
-          </button>
+          <div className="flex justify-center rounded-xl border border-zinc-200 bg-white py-2">
+            <SaveButton postId={post.id} initialSaved={savedPostIds.includes(post.id)} initialCount={post.saves_count ?? 0} />
+          </div>
           <button onClick={handleFacebookShare} className="flex flex-col items-center justify-center gap-1 py-3 bg-white rounded-xl border border-zinc-200 hover:bg-zinc-50 text-zinc-700">
             <Share2 size={20} className="text-zinc-400" />
             <span className="text-[12px] font-bold">Facebook</span>

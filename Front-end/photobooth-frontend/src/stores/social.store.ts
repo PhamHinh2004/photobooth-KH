@@ -3,7 +3,6 @@ import { socialApi } from '../api/social.api';
 
 interface SocialState {
   savedPostIds: string[];
-  repostedPostIds: string[];
   likedPostIds: string[];
   likedCommentIds: string[];
   fetchInteractions: () => Promise<void>;
@@ -13,7 +12,6 @@ interface SocialState {
 
 export const useSocialStore = create<SocialState>((set, get) => ({
   savedPostIds: [],
-  repostedPostIds: [],
   likedPostIds: [],
   likedCommentIds: [],
   fetchInteractions: async () => {
@@ -24,7 +22,6 @@ export const useSocialStore = create<SocialState>((set, get) => ({
       ]);
       set({
         savedPostIds: data.savedPostIds || [],
-        repostedPostIds: data.repostedPostIds || [],
         likedPostIds: data.likedPostIds || [],
         likedCommentIds: likedComments || [],
       });
@@ -41,6 +38,7 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     }
   },
   clearInteractions: () => {
-    set({ savedPostIds: [], repostedPostIds: [], likedPostIds: [], likedCommentIds: [] });
+    set({ savedPostIds: [], likedPostIds: [], likedCommentIds: [] });
   },
 }));
+
