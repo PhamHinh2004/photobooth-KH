@@ -12,6 +12,7 @@ import {
 } from '@ant-design/icons'
 import { useAuthStore } from '@/stores/auth.store'
 import { Dropdown } from 'antd'
+import NotificationButton from '@/components/notifications/NotificationButton'
 
 const AdminLayout = () => {
   const [collapsed, setCollapsed] = useState(false)
@@ -131,6 +132,7 @@ const AdminLayout = () => {
           </button>
 
           <div className="flex items-center gap-4">
+            <NotificationButton />
             <Dropdown menu={{ items: userDropdownItems }} placement="bottomRight" trigger={['click']}>
               <div className="flex items-center gap-3 cursor-pointer p-1.5 pr-3 rounded-full border border-gray-200 hover:bg-gray-50 transition-colors">
                 <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-semibold">

@@ -106,7 +106,7 @@ export const socialApi = {
     return { ...data, data: await attachCustomerProfiles(data.data || []) };
   },
   deletePost: async (id: string) => {
-    const { data } = await axiosInstance.delete(`/posts/${id}`);
+    await axiosInstance.delete(`/posts/${id}`);
   },
   toggleSave: async (postId: string) => {
     const { data } = await axiosInstance.post(`/posts/${postId}/save`);
@@ -146,5 +146,13 @@ export const socialApi = {
   getMyInteractions: async () => {
     const { data } = await axiosInstance.get('/posts/me/interactions');
     return data;
-  }
+  },
+  toggleCommentLike: async (commentId: string) => {
+    const { data } = await axiosInstance.post(`/comments/${commentId}/like`);
+    return data as { liked: boolean; likesCount: number };
+  },
+  getMyLikedComments: async () => {
+    const { data } = await axiosInstance.get('/comments/my-likes');
+    return data as string[];
+  },
 };

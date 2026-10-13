@@ -102,7 +102,12 @@ export class PostsService {
     }
 
     const updatedPost = await this.postRepository.findOne({ where: { id: postId } });
-    this.eventEmitter.emit('post.liked', { postId, likesCount: updatedPost!.likes_count });
+    this.eventEmitter.emit('post.liked', {
+      postId,
+      likesCount: updatedPost!.likes_count,
+      accountId,
+      isLiked: !existing,
+    });
     return updatedPost;
   }
 

@@ -102,4 +102,9 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleCommentDeleted(payload: { id: string; postId: string }) {
     this.server.to(`post:${payload.postId}`).emit('comment:deleted', payload.id);
   }
+
+  @OnEvent('comment.liked')
+  handleCommentLiked(payload: { commentId: string; postId: string; likesCount: number }) {
+    this.server.to(`post:${payload.postId}`).emit('comment:liked', payload);
+  }
 }

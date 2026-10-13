@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { authApi } from '@/api/auth.api'
 import AiFrameAssistant from '@/components/assistant/AiFrameAssistant'
 import { useSocialStore } from '@/stores/social.store'
+import NotificationButton from '@/components/notifications/NotificationButton'
 
 interface PublicLayoutProps {
   children: React.ReactNode
@@ -144,6 +145,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
             <span className="text-outline">|</span>
             <button onClick={() => setLang('EN')} className={`bg-transparent border-0 cursor-pointer ${lang === 'EN' ? 'text-secondary font-bold' : 'text-on-surface-variant'}`}>EN</button>
           </div>
+          {isAuthenticated && <NotificationButton />}
           {isAuthenticated ? (
             <Dropdown menu={{ items: accountMenuItems }} trigger={['click']} placement="bottomRight">
               <button className="bg-secondary/10 border border-secondary/30 text-secondary font-headline-lg-mobile px-3 py-1.5 rounded-full flex items-center gap-1.5 cursor-pointer hover:bg-secondary/20 transition-colors">

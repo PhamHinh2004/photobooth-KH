@@ -23,6 +23,7 @@ import { CommentsModule } from './modules/comments/comments.module';
 import { SocialModule } from './modules/social/social.module';
 import { RoomsModule } from './modules/rooms/rooms.module';
 import { RedisModule } from './modules/redis/redis.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ChatboxModule } from './modules/chatbox/chatbox.module';
 
 @Module({
@@ -55,6 +56,7 @@ import { ChatboxModule } from './modules/chatbox/chatbox.module';
     SocialModule,
     RedisModule,
     RoomsModule,
+    NotificationsModule,
     ChatboxModule,
   ],
   controllers: [AppController],

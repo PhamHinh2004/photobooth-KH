@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { message, Popconfirm } from 'antd';
 import { CommentInput } from './CommentInput';
 import type { CommentNode } from './commentTree';
 import { Heart, MessageSquare, ChevronDown, ChevronUp, MoreHorizontal, Trash2 } from 'lucide-react';
 import { socialApi } from '../../api/social.api';
 import { useAuthStore } from '../../stores/auth.store';
+import { useSocialStore } from '../../stores/social.store';
 
 export type { CommentNode } from './commentTree';
 
@@ -65,14 +66,30 @@ export function CommentThread({
 }) {
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [expanded, setExpanded] = useState(depth < 1);
-  const [liked, setLiked] = useState(false);
+  const likedCommentIds = useSocialStore((state) => state.likedCommentIds);
+  const setLikedComment = useSocialStore((state) => state.setLikedComment);
+  const isLikedInStore = likedCommentIds.includes(comment.id);
+
+  const [liked, setLiked] = useState(isLikedInStore);
   const [likeCount, setLikeCount] = useState(comment.likes_count ?? 0);
   const [showReactions, setShowReactions] = useState(false);
-  const [reaction, setReaction] = useState<string | null>(null);
+  const [reaction, setReaction] = useState<string | null>(isLikedInStore ? '❤️' : null);
   const [showOptions, setShowOptions] = useState(false);
   const currentAccountId = useAuthStore((state) => state.user?.id);
   const commentAccountId = comment.account_id ?? comment.account?.id;
   const isOwner = currentAccountId != null && String(commentAccountId) === String(currentAccountId);
+
+  useEffect(() => {
+    setLiked(isLikedInStore);
+    if (isLikedInStore && !reaction) setReaction('❤️');
+    else if (!isLikedInStore) setReaction(null);
+  }, [isLikedInStore]);
+
+  useEffect(() => {
+    if (comment.likes_count !== undefined) {
+      setLikeCount(comment.likes_count);
+    }
+  }, [comment.likes_count]);
 
   const fullName =
     comment.account?.customer?.fullName ||
@@ -92,26 +109,38 @@ export function CommentThread({
     return new Date(dateString).toLocaleDateString('vi-VN');
   };
 
-  const handleLike = () => {
-    if (liked) {
-      setLiked(false);
-      setLikeCount((c) => Math.max(0, c - 1));
-      setReaction(null);
-    } else {
-      setLiked(true);
-      setLikeCount((c) => c + 1);
-      setReaction('❤️');
+  const handleLike = async () => {
+    if (!currentAccountId) {
+      message.warning('Vui lòng đăng nhập để thả tim!');
+      return;
     }
+
+    const nextLiked = !liked;
+    setLiked(nextLiked);
+    setLikeCount((c) => (nextLiked ? c + 1 : Math.max(0, c - 1)));
+    if (nextLiked) setReaction('❤️');
+    else setReaction(null);
     setShowReactions(false);
+
+    try {
+      const res = await socialApi.toggleCommentLike(comment.id);
+      setLiked(res.liked);
+      setLikeCount(res.likesCount);
+      setLikedComment(comment.id, res.liked);
+    } catch {
+      // Revert if error
+      setLiked(liked);
+      setLikeCount((c) => (liked ? c + 1 : Math.max(0, c - 1)));
+      message.error('Không thể thực hiện hành động');
+    }
   };
 
-  const handleReaction = (emoji: string) => {
+  const handleReaction = async (emoji: string) => {
     setReaction(emoji);
-    if (!liked) {
-      setLiked(true);
-      setLikeCount((c) => c + 1);
-    }
     setShowReactions(false);
+    if (!liked) {
+      await handleLike();
+    }
   };
 
   const handleDelete = async () => {
