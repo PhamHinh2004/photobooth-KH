@@ -4,6 +4,7 @@ import {
   CreateDateColumn, UpdateDateColumn, JoinColumn, Index
 } from 'typeorm';
 import { Account } from '../../accounts/entities/account.entity';
+import { TypeStyle } from '../../type-styles/entities/type-style.entity';
 
 export enum SessionTypeSupported {
   SINGLE = 'single',
@@ -79,6 +80,13 @@ export class Frame {
   @ManyToOne(() => Account)
   @JoinColumn({ name: 'created_by' })
   created_by: Account;
+
+  @Column({ type: 'uuid', nullable: true })
+  type_style_id?: string | null;
+
+  @ManyToOne(() => TypeStyle, (typeStyle) => typeStyle.frames, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'type_style_id' })
+  type_style?: TypeStyle | null;
 
   @CreateDateColumn()
   created_at: Date;

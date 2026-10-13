@@ -9,6 +9,7 @@ import {
   TeamOutlined,
   StarOutlined,
   PictureOutlined,
+  TagsOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '@/stores/auth.store'
 import { Dropdown } from 'antd'
@@ -43,6 +44,12 @@ const AdminLayout = () => {
       icon: <PictureOutlined />,
       label: 'Tạo Frame Mới',
       path: '/admin/create-frame',
+    },
+    {
+      key: 'type-styles',
+      icon: <TagsOutlined />,
+      label: 'Quản lý Type Style',
+      path: '/admin/type-styles',
     },
     {
       key: 'accounts',

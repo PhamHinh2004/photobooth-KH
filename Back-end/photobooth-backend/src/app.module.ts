@@ -25,6 +25,7 @@ import { RoomsModule } from './modules/rooms/rooms.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ChatboxModule } from './modules/chatbox/chatbox.module';
+import { TypeStylesModule } from './modules/type-styles/type-styles.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { ChatboxModule } from './modules/chatbox/chatbox.module';
     RoomsModule,
     NotificationsModule,
     ChatboxModule,
+    TypeStylesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

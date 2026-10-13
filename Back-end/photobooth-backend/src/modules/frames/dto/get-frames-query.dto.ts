@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsNumber, Min, Max, IsIn } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsNumber, Min, Max, IsIn, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class GetFramesQueryDto {
@@ -7,6 +7,9 @@ export class GetFramesQueryDto {
 
   @IsOptional() @IsString()
   categoryId?: string;
+
+  @IsOptional() @IsUUID()
+  typeStyleId?: string;
 
   @IsOptional() @IsEnum(['single', 'group', 'both'])
   sessionType?: string;
