@@ -11,7 +11,7 @@ export class FramesService {
     private readonly frameRepository: Repository<Frame>,
   ) {}
 
-  async create(data: Omit<Frame, 'id' | 'is_active' | 'usage_count' | 'created_at' | 'updated_at' | 'created_by' | 'rating' | 'rating_count'> & { created_by: string }) {
+  async create(data: Omit<Frame, 'id' | 'is_active' | 'usage_count' | 'created_at' | 'updated_at' | 'created_by' | 'rating' | 'rating_count' | 'type_style'> & { created_by: string }) {
     const { created_by, ...rest } = data;
     const frame = this.frameRepository.create({
       ...rest,
@@ -22,7 +22,12 @@ export class FramesService {
 
   findAll(query: GetFramesQueryDto) {
     const qb = this.frameRepository.createQueryBuilder('frame')
+      .leftJoinAndSelect('frame.type_style', 'type_style')
       .where('frame.is_active = :isActive', { isActive: true });
+
+    if (query.typeStyleId) {
+      qb.andWhere('frame.type_style_id = :typeStyleId', { typeStyleId: query.typeStyleId });
+    }
 
     if (query.name) {
       qb.andWhere('frame.name ILIKE :name', { name: `%${query.name}%` });
@@ -48,6 +53,7 @@ export class FramesService {
     }
     return this.frameRepository.find({
       where,
+      relations: { type_style: true },
       order: { sort_order: 'ASC' },
     });
   }

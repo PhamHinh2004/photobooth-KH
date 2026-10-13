@@ -1,4 +1,4 @@
-import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { SessionTypeSupported, FrameAspectRatio } from '../entities/frame.entity';
 
@@ -22,4 +22,9 @@ export class CreateFrameDto {
   // Gửi dạng JSON string, parse trong Controller
   @IsString()
   layout_config: string;
+
+  @IsOptional()
+  @IsUUID()
+  @Transform(({ value }) => (value === '' || value === 'null' ? undefined : value))
+  type_style_id?: string;
 }

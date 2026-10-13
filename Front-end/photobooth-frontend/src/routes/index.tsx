@@ -16,6 +16,8 @@ import CustomersPage from '../pages/admin/CustomersPage'
 import CustomerDetailPage from '../pages/admin/CustomerDetailPage'
 import ReviewsPage from '../pages/admin/ReviewsPage'
 import CreateFramePage from '../pages/admin/CreateFramePage'
+import TypeStylesPage from '../pages/admin/TypeStylesPage'
+import TypeStyleDetailPage from '../pages/admin/TypeStyleDetailPage'
 import CapturePage from '../pages/capture/CapturePage'
 import FeedPage from '../pages/social/FeedPage'
 import PostDetailPage from '../pages/social/PostDetailPage'
@@ -96,6 +98,14 @@ const routes: RouteObject[] = [
       {
         path: 'reviews',
         element: <ReviewsPage />,
+      },
+      {
+        path: 'type-styles',
+        element: <TypeStylesPage />,
+      },
+      {
+        path: 'type-styles/:id',
+        element: <TypeStyleDetailPage />,
       },
     ],
   },

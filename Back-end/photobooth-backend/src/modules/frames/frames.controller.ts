@@ -29,6 +29,7 @@ import { CreateFrameDto } from './dto/create-frame.dto';
 import { GetFramesQueryDto } from './dto/get-frames-query.dto';
 import { SessionTypeSupported } from './entities/frame.entity';
 import { FramesService } from './frames.service';
+import { TypeStylesService } from '../type-styles/type-styles.service';
 
 @ApiTags('Frames')
 @ApiBearerAuth()
@@ -37,6 +38,7 @@ export class FramesController {
   constructor(
     private readonly storageService: StorageService,
     private readonly framesService: FramesService,
+    private readonly typeStylesService: TypeStylesService,
   ) {}
 
   @Post()
@@ -52,6 +54,7 @@ export class FramesController {
         aspect_ratio: { type: 'string', example: '1:4' },
         session_type_supported: { type: 'string', example: 'single' },
         sort_order: { type: 'number', example: 0 },
+        type_style_id: { type: 'string', format: 'uuid' },
         layout_config: {
           type: 'string',
           example:
@@ -81,6 +84,10 @@ export class FramesController {
 
     this.validateLayoutConfig(layoutConfig);
 
+    if (dto.type_style_id) {
+      await this.typeStylesService.findOne(dto.type_style_id); // 404 nếu không tồn tại
+    }
+
     // 1. Upload ảnh frame lên R2 (dùng lại StorageService đã có)
     const filenameParts = file.originalname.split('.');
     const ext = filenameParts.length > 1 ? filenameParts.pop()! : 'png';
@@ -97,6 +104,7 @@ export class FramesController {
       session_type_supported: dto.session_type_supported ?? SessionTypeSupported.BOTH,
       sort_order: dto.sort_order ?? 0,
       layout_config: layoutConfig,
+      type_style_id: dto.type_style_id ?? null,
       created_by: user.id,
     });
   }
