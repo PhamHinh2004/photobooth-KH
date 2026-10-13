@@ -27,7 +27,7 @@ export default function GroupSetupPage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-[1220px] px-4 pb-12 pt-5 md:px-8 md:pt-8">
+    <main className="mx-auto w-full max-w-[1220px] px-4 pb-12 pt-24 md:px-8 md:pt-28">
       <GroupCaptureProgress activeStep={0} />
 
       <header className="mx-auto mb-8 max-w-2xl text-center">

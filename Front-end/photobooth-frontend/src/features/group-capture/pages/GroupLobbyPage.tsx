@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGroupCaptureStore } from '../store/roomStore';
 import type { Participant } from '../types';
 import { connectRoomSocket } from '../realtime/roomSocket';
 import { joinLivekit } from '../media/useLiveKitRoom';
 import { roomsApi } from '../api/rooms.api';
-import { Button, Typography, message, Card, Switch } from 'antd';
-import { UserOutlined } from '@ant-design/icons';
+import { Button, Typography, message, Card, Switch, Modal, Spin } from 'antd';
+import { UserOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import GroupCaptureProgress from '../components/GroupCaptureProgress';
 import { Room } from '../types';
 import { Socket } from 'socket.io-client';
 import { useAuthStore } from '@/stores/auth.store';
@@ -64,10 +65,43 @@ export default function GroupLobbyPage() {
   const [livekitRoom, setLivekitRoom] = useState<any>(null);
   const [savingEditPolicy, setSavingEditPolicy] = useState(false);
   const [openingStudio, setOpeningStudio] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [pendingBackPath, setPendingBackPath] = useState<string | null>(null);
+  const historyPushedRef = useRef(false);
 
   const isHost = currentRoom?.host_account_id === String(user?.id);
   const isAllReady = currentRoom?.participants?.length === currentRoom?.max_participants &&
     currentRoom?.participants?.every(p => p.status === 'ready');
+
+  const handleRequestBack = useCallback((targetPath?: string) => {
+    setPendingBackPath(targetPath || (isHost ? '/group/new/frame' : '/'));
+    setIsCancelModalOpen(true);
+  }, [isHost]);
+
+  const confirmCancelAndGoBack = useCallback(() => {
+    setIsCancelModalOpen(false);
+    const destination = pendingBackPath || (isHost ? '/group/new/frame' : '/');
+    setPendingBackPath(null);
+    navigate(destination);
+  }, [navigate, pendingBackPath, isHost]);
+
+  // Handle browser back button: push history entry and show confirmation
+  useEffect(() => {
+    if (!historyPushedRef.current) {
+      window.history.pushState({ groupStep: 'lobby' }, '');
+      historyPushedRef.current = true;
+    }
+
+    const handlePopState = () => {
+      // Prevent browser from navigating away immediately
+      window.history.pushState({ groupStep: 'lobby' }, '');
+      setPendingBackPath(isHost ? '/group/new/frame' : '/');
+      setIsCancelModalOpen(true);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isHost]);
 
   useEffect(() => {
     let sk: Socket | null = null;
@@ -190,11 +224,37 @@ export default function GroupLobbyPage() {
     }
   };
 
-  if (!currentRoom) return <div className="p-8 text-center">Đang tải...</div>;
+  if (!currentRoom) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center pt-28">
+        <Spin size="large" tip="Đang tải thông tin phòng..." />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-8">
-      <Title level={2}>Phòng Chờ</Title>
+    <main className="mx-auto w-full max-w-5xl px-4 pb-32 pt-24 md:px-8 md:pt-28">
+      <GroupCaptureProgress
+        activeStep={3}
+        onStepClick={(idx) => {
+          const paths = ['/group/new', '/group/new/size', '/group/new/frame'];
+          handleRequestBack(paths[idx]);
+        }}
+      />
+
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <Title level={2} className="!mb-1">Bước 4: Phòng Chờ</Title>
+          <Text type="secondary">Chờ tất cả thành viên vào buồng chụp và bật camera trước khi bắt đầu</Text>
+        </div>
+        <Button
+          icon={<ArrowLeftOutlined />}
+          onClick={() => handleRequestBack()}
+          className="rounded-full font-medium"
+        >
+          Quay lại chọn frame
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="space-y-4">
@@ -269,7 +329,15 @@ export default function GroupLobbyPage() {
 
       <div className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-4 z-50">
         <div className="max-w-5xl mx-auto flex justify-between items-center">
-          <Text type="secondary">Chờ tất cả sẵn sàng để vào buồng chụp</Text>
+          <div className="flex items-center gap-3">
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => handleRequestBack()}
+            >
+              Quay lại
+            </Button>
+            <Text type="secondary" className="hidden sm:inline">Chờ tất cả sẵn sàng để vào buồng chụp</Text>
+          </div>
           {isHost ? (
             <Button
               type="primary"
@@ -285,6 +353,46 @@ export default function GroupLobbyPage() {
           )}
         </div>
       </div>
-    </div>
+
+      {/* Cancel Confirmation Modal */}
+      <Modal
+        title={null}
+        open={isCancelModalOpen}
+        onCancel={() => {
+          setIsCancelModalOpen(false);
+          setPendingBackPath(null);
+        }}
+        footer={null}
+        centered
+        width={420}
+      >
+        <div className="flex flex-col items-center text-center py-4">
+          <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
+            <span className="text-3xl">⚠️</span>
+          </div>
+          <h3 className="text-xl font-black text-gray-900 mb-2">Hủy lần chụp này?</h3>
+          <p className="text-gray-500 text-sm mb-6 max-w-xs">
+            Nếu quay lại, phòng chụp hiện tại sẽ bị hủy và bạn sẽ rời khỏi phòng chờ. Bạn có chắc chắn muốn hủy không?
+          </p>
+          <div className="flex gap-3 w-full">
+            <button
+              onClick={() => {
+                setIsCancelModalOpen(false);
+                setPendingBackPath(null);
+              }}
+              className="flex-1 py-2.5 rounded-full border-2 border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 transition-all cursor-pointer bg-transparent"
+            >
+              Ở Lại Phòng Chờ
+            </button>
+            <button
+              onClick={confirmCancelAndGoBack}
+              className="flex-1 py-2.5 rounded-full bg-gradient-to-r from-red-500 to-rose-500 text-white font-bold text-sm shadow-lg hover:opacity-90 transition-all cursor-pointer border-0"
+            >
+              Hủy &amp; Quay Lại
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </main>
   );
 }

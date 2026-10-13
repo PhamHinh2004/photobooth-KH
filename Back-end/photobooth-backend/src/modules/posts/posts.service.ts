@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, EntityManager } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -6,6 +6,7 @@ import { Post } from './entities/post.entity';
 import { PostLike } from './entities/post-like.entity';
 import { PostRepost } from './entities/post-repost.entity';
 import { SavedPost } from './entities/saved-post.entity';
+import { SavedCollection } from './entities/saved-collection.entity';
 import { SessionResult, SessionType } from '../session-results/entities/session-result.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { RepostDto } from './dto/repost.dto';
@@ -19,6 +20,7 @@ export class PostsService {
     @InjectRepository(PostLike) private readonly postLikeRepository: Repository<PostLike>,
     @InjectRepository(PostRepost) private readonly postRepostRepository: Repository<PostRepost>,
     @InjectRepository(SavedPost) private readonly savedPostRepository: Repository<SavedPost>,
+    @InjectRepository(SavedCollection) private readonly savedCollectionRepository: Repository<SavedCollection>,
     @InjectRepository(SessionResult) private readonly sessionRepository: Repository<SessionResult>,
     private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource,
@@ -322,11 +324,15 @@ export class PostsService {
 
     if (existing) {
       await this.savedPostRepository.delete(existing.id);
-      return { saved: false };
+      await this.postRepository.decrement({ id: postId }, 'saves_count', 1);
+      const post = await this.postRepository.findOne({ where: { id: postId } });
+      return { saved: false, saves_count: post?.saves_count ?? 0 };
     }
 
     await this.savedPostRepository.save({ post_id: postId, account_id: accountId });
-    return { saved: true };
+    await this.postRepository.increment({ id: postId }, 'saves_count', 1);
+    const post = await this.postRepository.findOne({ where: { id: postId } });
+    return { saved: true, saves_count: post?.saves_count ?? 0 };
   }
 
   async findMyReposts(accountId: string, page = 1, limit = 10) {
@@ -341,16 +347,63 @@ export class PostsService {
     return { data, total, page, limit };
   }
 
-  async findMySavedPosts(accountId: string, page = 1, limit = 10) {
+  async findMySavedPosts(accountId: string, page = 1, limit = 10, collectionId?: string) {
     const [data, total] = await this.savedPostRepository.findAndCount({
-      where: { account_id: accountId },
+      where: { account_id: accountId, ...(collectionId ? { collection_id: collectionId } : {}) },
       order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
-      relations: { post: { account: true, session: { photo: { frame: true }, room: true } } },
+      relations: { collection: true, post: { account: true, session: { photo: { frame: true }, room: true } } },
     });
 
     return { data, total, page, limit };
+  }
+
+  async findMySavedCollections(accountId: string) {
+    return this.savedCollectionRepository.find({
+      where: { account_id: accountId },
+      order: { created_at: 'ASC' },
+    });
+  }
+
+  async createSavedCollection(accountId: string, name: string) {
+    const normalizedName = name?.trim();
+    if (!normalizedName || normalizedName.length > 80) {
+      throw new BadRequestException('Tên bộ sưu tập phải có từ 1 đến 80 ký tự');
+    }
+
+    const existing = await this.savedCollectionRepository.findOne({
+      where: { account_id: accountId, name: normalizedName },
+    });
+    if (existing) throw new ConflictException('Tên bộ sưu tập đã tồn tại');
+
+    return this.savedCollectionRepository.save({ account_id: accountId, name: normalizedName });
+  }
+
+  async deleteSavedCollection(accountId: string, collectionId: string) {
+    const collection = await this.savedCollectionRepository.findOne({
+      where: { id: collectionId, account_id: accountId },
+    });
+    if (!collection) throw new NotFoundException('Không tìm thấy bộ sưu tập');
+    await this.savedCollectionRepository.remove(collection);
+    return { deleted: true };
+  }
+
+  async setSavedPostCollection(accountId: string, postId: string, collectionId: string | null) {
+    const savedPost = await this.savedPostRepository.findOne({
+      where: { account_id: accountId, post_id: postId },
+    });
+    if (!savedPost) throw new NotFoundException('Bài viết chưa được lưu');
+
+    if (collectionId) {
+      const collection = await this.savedCollectionRepository.findOne({
+        where: { id: collectionId, account_id: accountId },
+      });
+      if (!collection) throw new NotFoundException('Không tìm thấy bộ sưu tập');
+    }
+
+    savedPost.collection_id = collectionId;
+    return this.savedPostRepository.save(savedPost);
   }
 
   async getUserInteractions(accountId: string) {

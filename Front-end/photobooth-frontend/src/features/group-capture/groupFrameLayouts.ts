@@ -27,7 +27,7 @@ function createLayout(id: string, rows: number[], customTitle?: string): GroupFr
 
 const layoutsByGroupSize: Record<number, GroupFrameLayout[]> = {
   2: [createLayout('2x2', [2, 2]), createLayout('1x4', [1, 1, 1, 1]), createLayout('2x3', [2, 2, 2])],
-  3: [createLayout('3x3', [3, 3, 3], 'Grid 3×3 (9 Slot)')],
+  3: [createLayout('3x2', [3, 3], 'Grid 3×2 (6 Slot)')],
   4: [createLayout('2x2', [2, 2]), createLayout('1x4', [1, 1, 1, 1]), createLayout('4x2', [4, 4])],
   5: [
     createLayout('5_3_2', [3, 2], 'Frame trơn 5 ô · 3 trên, 2 dưới'),

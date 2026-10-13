@@ -50,7 +50,7 @@ The password reset flow uses these endpoints:
 - `POST /api/v1/auth/verify-otp` with `{ "email": "...", "otp": "123456" }`
 - `POST /api/v1/auth/reset-password` with `{ "email": "...", "resetToken": "...", "newPassword": "..." }`
 
-When `DB_SYNCHRONIZE=false`, run the `password_resets` table statement in `src/database/schema.sql` manually.
+When `DB_SYNCHRONIZE=false`, apply required schema changes directly in the Neon SQL Editor before deploying.
 
 ## Compile and run the project
 

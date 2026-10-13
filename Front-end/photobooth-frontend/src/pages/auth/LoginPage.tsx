@@ -14,10 +14,12 @@ const LoginPage: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(true)
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [invalidCredentials, setInvalidCredentials] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMsg(null)
+    setInvalidCredentials(false)
 
     if (!email.trim()) {
       message.warning('Vui lòng nhập Email hoặc SĐT!')
@@ -35,12 +37,20 @@ const LoginPage: React.FC = () => {
       message.success('Đăng nhập thành công!')
       navigate(response.user.role?.toLowerCase() === 'admin' ? '/admin' : '/', { replace: true })
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string | string[] } } }
+      const axiosError = err as { response?: { status?: number; data?: { message?: string | string[] } } }
       const apiMessage = axiosError.response?.data?.message
       const messageText = Array.isArray(apiMessage) ? apiMessage.join(', ') : apiMessage
-      const fallbackMessage = 'Đăng nhập thất bại, vui lòng kiểm tra lại thông tin'
-      setErrorMsg(messageText || fallbackMessage)
-      message.error(messageText || fallbackMessage)
+      const fallbackMessage = axiosError.response
+        ? 'Đăng nhập thất bại, vui lòng kiểm tra lại thông tin'
+        : 'Không thể kết nối máy chủ. Vui lòng kiểm tra backend và thử lại.'
+      const isInvalidCredentials = axiosError.response?.status === 401
+        && messageText?.toLowerCase().includes('mật khẩu không chính xác')
+      const displayMessage = isInvalidCredentials
+        ? 'Sai tài khoản hoặc mật khẩu. Vui lòng nhập lại.'
+        : messageText || fallbackMessage
+      setInvalidCredentials(Boolean(isInvalidCredentials))
+      setErrorMsg(displayMessage)
+      message.error(displayMessage)
     } finally {
       setLoading(false)
     }
@@ -85,9 +95,11 @@ const LoginPage: React.FC = () => {
               onChange={(e) => {
                 setEmail(e.target.value)
                 setErrorMsg(null)
+                setInvalidCredentials(false)
               }}
               placeholder="user@example.com"
-              className="w-full rounded-lg border border-outline-variant p-3 font-body-md text-body-md text-on-surface input-inset focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all pr-10"
+              aria-invalid={invalidCredentials}
+              className={`w-full rounded-lg border p-3 font-body-md text-body-md text-on-surface input-inset focus:outline-none focus:ring-2 transition-all pr-10 ${invalidCredentials ? 'border-error focus:border-error focus:ring-error/30' : 'border-outline-variant focus:ring-secondary focus:border-transparent'}`}
               required
             />
             <span className="material-symbols-outlined absolute right-3 top-3.5 text-outline text-lg">person</span>
@@ -104,9 +116,14 @@ const LoginPage: React.FC = () => {
               id="loginPassword"
               type={showPassword ? 'text' : 'password'}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                setErrorMsg(null)
+                setInvalidCredentials(false)
+              }}
               placeholder="••••••••"
-              className="w-full rounded-lg border border-outline-variant p-3 font-body-md text-body-md text-on-surface input-inset focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all pr-10"
+              aria-invalid={invalidCredentials}
+              className={`w-full rounded-lg border p-3 font-body-md text-body-md text-on-surface input-inset focus:outline-none focus:ring-2 transition-all pr-10 ${invalidCredentials ? 'border-error focus:border-error focus:ring-error/30' : 'border-outline-variant focus:ring-secondary focus:border-transparent'}`}
               required
             />
             <button
