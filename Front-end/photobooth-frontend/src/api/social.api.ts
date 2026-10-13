@@ -108,21 +108,40 @@ export const socialApi = {
   deletePost: async (id: string) => {
     const { data } = await axiosInstance.delete(`/posts/${id}`);
   },
-  toggleRepost: async (postId: string, quoteCaption?: string) => {
-    const { data } = await axiosInstance.post(`/posts/${postId}/repost`, { quoteCaption });
-    return data;
-  },
   toggleSave: async (postId: string) => {
     const { data } = await axiosInstance.post(`/posts/${postId}/save`);
     return data;
   },
-  getMyReposts: async (page = 1, limit = 10) => {
-    const { data } = await axiosInstance.get(`/posts/me/reposts?page=${page}&limit=${limit}`);
-    return { ...data, data: await attachCustomerProfiles(data.data.map((item: any) => item.post) || []) };
+  getMySavedPosts: async (page = 1, limit = 10, collectionId?: string) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (collectionId) params.set('collectionId', collectionId);
+    const { data } = await axiosInstance.get(`/posts/me/saved?${params.toString()}`);
+    const savedRows = data.data || [];
+    const posts = await attachCustomerProfiles(savedRows.map((item: any) => item.post));
+    return {
+      ...data,
+      data: posts.map((post: any, index: number) => ({
+        ...post,
+        saved_id: savedRows[index].id,
+        collection_id: savedRows[index].collection_id ?? null,
+      })),
+    };
   },
-  getMySavedPosts: async (page = 1, limit = 10) => {
-    const { data } = await axiosInstance.get(`/posts/me/saved?page=${page}&limit=${limit}`);
-    return { ...data, data: await attachCustomerProfiles(data.data.map((item: any) => item.post) || []) };
+  getMySavedCollections: async () => {
+    const { data } = await axiosInstance.get('/posts/me/collections');
+    return data;
+  },
+  createSavedCollection: async (name: string) => {
+    const { data } = await axiosInstance.post('/posts/me/collections', { name });
+    return data;
+  },
+  deleteSavedCollection: async (collectionId: string) => {
+    const { data } = await axiosInstance.delete(`/posts/me/collections/${collectionId}`);
+    return data;
+  },
+  setSavedPostCollection: async (postId: string, collectionId: string | null) => {
+    const { data } = await axiosInstance.patch(`/posts/me/saved/${postId}/collection`, { collectionId });
+    return data;
   },
   getMyInteractions: async () => {
     const { data } = await axiosInstance.get('/posts/me/interactions');

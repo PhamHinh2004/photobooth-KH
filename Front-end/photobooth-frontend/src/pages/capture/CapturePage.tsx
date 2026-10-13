@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Spin, Modal, Input, Rate } from 'antd'
 import { useAuthStore } from '@/stores/auth.store'
@@ -12,7 +12,6 @@ import {
 import { socialApi } from '@/api/social.api'
 import { authApi } from '@/api/auth.api'
 import { sharePostToFacebook } from '@/utils/facebookShare'
-import AiFrameAssistant from '@/components/assistant/AiFrameAssistant'
 
 import PackageSelector, { PACKAGE_OPTIONS } from '@/components/capture/step1/PackageSelector'
 import FrameSelector from '@/components/capture/step2/FrameSelector'
@@ -80,6 +79,67 @@ export default function CapturePage() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [captionText, setCaptionText] = useState('Vừa chụp bộ ảnh thật cool tại KH BOOTH AI! 😎✨')
   const [frameRating, setFrameRating] = useState<number>(5)
+
+  // Cancel confirmation modal
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
+  const [pendingBackStep, setPendingBackStep] = useState<string | null>(null)
+
+  // Track whether history entries have been pushed (to avoid duplicates)
+  const historyPushedRef = useRef(false)
+
+  // Steps ordered list for navigation
+  const STEP_KEYS = ['package-select', 'frame-select', 'capturing', 'review', 'filter', 'result'] as const
+
+  // Navigate back one step with confirmation for step 3+
+  const handleStepBack = useCallback((fromStep: string) => {
+    const fromIdx = STEP_KEYS.indexOf(fromStep as any)
+    if (fromIdx <= 0) return // already at step 1, nothing to go back to
+
+    const targetStep = STEP_KEYS[fromIdx - 1]
+
+    // If going back from step 3 (capturing) or later, show confirmation
+    if (fromIdx >= 2) {
+      setPendingBackStep(targetStep)
+      setIsCancelModalOpen(true)
+      return
+    }
+
+    // Steps 1-2: go back freely
+    setStep(targetStep as any)
+  }, [])
+
+  // Confirm cancel and go back
+  const confirmCancelAndGoBack = useCallback(() => {
+    setIsCancelModalOpen(false)
+    if (pendingBackStep) {
+      setStep(pendingBackStep as any)
+      setPendingBackStep(null)
+    }
+  }, [pendingBackStep])
+
+  // Browser back button handling: push a history entry per step change
+  useEffect(() => {
+    // Push an entry so the browser back button triggers popstate instead of leaving the page
+    if (!historyPushedRef.current) {
+      window.history.pushState({ captureStep: step }, '')
+      historyPushedRef.current = true
+    }
+
+    const handlePopState = () => {
+      // Prevent the browser from actually navigating away
+      // Push state back immediately so we stay on the page
+      window.history.pushState({ captureStep: step }, '')
+      handleStepBack(step)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [step, handleStepBack])
+
+  // Push a new history entry whenever the step advances forward
+  useEffect(() => {
+    window.history.pushState({ captureStep: step }, '')
+  }, [step])
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
@@ -274,7 +334,7 @@ export default function CapturePage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="min-h-screen flex flex-col pt-24 md:pt-28 pb-12"
       style={{
         fontFamily: "'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif",
         backgroundColor: '#f8f9fa',
@@ -285,57 +345,6 @@ export default function CapturePage() {
         `
       }}
     >
-      {/* ══════════════════════════════════════
-          TOP NAVBAR (Figma Hình 1)
-      ══════════════════════════════════════ */}
-      <nav className="w-full bg-white/70 backdrop-blur-md border-b border-white/60 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          {/* Logo KH BOOTH AI */}
-          <div
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 cursor-pointer select-none"
-          >
-            <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-fuchsia-600 via-purple-600 to-sky-500 bg-clip-text text-transparent">
-              KH BOOTH
-            </span>
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-600 border border-sky-200">
-              AI
-            </span>
-          </div>
-
-          {/* Navigation Links */}
-          <div className="hidden md:flex items-center gap-8 text-xs sm:text-sm font-medium text-gray-600">
-            <button onClick={() => navigate('/')} className="hover:text-gray-900 transition-colors cursor-pointer bg-transparent border-0">Trang Chủ</button>
-            <button onClick={() => setStep('package-select')} className="text-gray-900 font-semibold cursor-pointer bg-transparent border-0">Chụp Đơn</button>
-            <button onClick={() => navigate('/')} className="hover:text-gray-900 transition-colors cursor-pointer bg-transparent border-0">Chụp Nhóm</button>
-            <button onClick={() => navigate('/about-us')} className="hover:text-gray-900 transition-colors cursor-pointer bg-transparent border-0">Về Chúng Tôi</button>
-            <button onClick={() => navigate('/')} className="hover:text-gray-900 transition-colors cursor-pointer bg-transparent border-0">Chính Sách</button>
-          </div>
-
-          {/* CTA & Avatar */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setStep('package-select')}
-              className="px-4 py-2 rounded-full bg-gradient-to-r from-[#89CFF0] to-[#38bdf8] text-gray-900 font-bold text-xs shadow-sm hover:opacity-95 transition-all flex items-center gap-1.5 cursor-pointer border-0"
-            >
-              <span>BẮT ĐẦU CHỤP</span>
-              <span>✨</span>
-            </button>
-            <div
-              onClick={() => navigate('/profile')}
-              className="w-8 h-8 rounded-full bg-sky-800 text-white flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-90"
-              title={user?.name || 'Tài khoản'}
-            >
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
-              ) : (
-                '👤'
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
-
       {/* ══════════════════════════════════════
           STEP PROGRESS BAR (Figma Hình 1)
       ══════════════════════════════════════ */}
@@ -350,8 +359,13 @@ export default function CapturePage() {
                 <button
                   onClick={() => {
                     if (isPast) {
-                      const keys = ['package-select', 'frame-select', 'capturing', 'review', 'filter', 'result']
-                      setStep(keys[idx] as any)
+                      // If going back to before step 3 from step 3+, show confirmation
+                      if (currentStepIdx >= 2 && idx < currentStepIdx) {
+                        setPendingBackStep(STEP_KEYS[idx])
+                        setIsCancelModalOpen(true)
+                      } else {
+                        setStep(STEP_KEYS[idx] as any)
+                      }
                     }
                   }}
                   disabled={!isPast && !isCurrent}
@@ -423,7 +437,7 @@ export default function CapturePage() {
                 selectedPackage={selectedPackage}
                 initialFrameId={initialFrameId}
                 onSelect={handleSelectFrame}
-                onBack={() => setStep('package-select')}
+                onBack={() => handleStepBack('frame-select')}
               />
             )}
 
@@ -432,7 +446,7 @@ export default function CapturePage() {
                 selectedPackage={selectedPackage}
                 selectedFrame={selectedFrame}
                 onComplete={handleCaptureComplete}
-                onBack={() => setStep('frame-select')}
+                onBack={() => handleStepBack('capturing')}
               />
             )}
 
@@ -532,23 +546,6 @@ export default function CapturePage() {
         )}
       </main>
 
-      {/* ══════════════════════════════════════
-          FOOTER (Figma Hình 1)
-      ══════════════════════════════════════ */}
-      <footer className="w-full border-t border-gray-200/60 py-6 px-6 bg-white/40 backdrop-blur-xs mt-auto">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
-          <div className="flex items-center gap-2">
-            <span className="font-extrabold text-sm tracking-tight text-[#d946ef]">KH BOOTH</span>
-            <span>© 2026 Photobooth AI Y2K. All rights reserved.</span>
-          </div>
-          <div className="flex items-center gap-6">
-            <button onClick={() => navigate('/about-us')} className="hover:text-gray-800 transition-colors cursor-pointer bg-transparent border-0">Về Chúng Tôi</button>
-            <button onClick={() => navigate('/')} className="hover:text-gray-800 transition-colors cursor-pointer bg-transparent border-0">Điều Khoản</button>
-            <button onClick={() => navigate('/')} className="hover:text-gray-800 transition-colors cursor-pointer bg-transparent border-0">Bảo Mật</button>
-          </div>
-        </div>
-      </footer>
-
       <Modal
         title="Chia Sẻ Lên Feed"
         open={isShareModalOpen}
@@ -573,7 +570,46 @@ export default function CapturePage() {
         </div>
         {shareError && <p className="text-red-500 mt-2 text-sm">{shareError}</p>}
       </Modal>
-      <AiFrameAssistant />
+
+      {/* Cancel Confirmation Modal */}
+      <Modal
+        title={null}
+        open={isCancelModalOpen}
+        onCancel={() => {
+          setIsCancelModalOpen(false)
+          setPendingBackStep(null)
+        }}
+        footer={null}
+        centered
+        width={420}
+      >
+        <div className="flex flex-col items-center text-center py-4">
+          <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
+            <span className="text-3xl">⚠️</span>
+          </div>
+          <h3 className="text-xl font-black text-gray-900 mb-2">Hủy lần chụp này?</h3>
+          <p className="text-gray-500 text-sm mb-6 max-w-xs">
+            Nếu quay lại, toàn bộ ảnh đã chụp và dữ liệu của lần chụp hiện tại sẽ bị mất. Bạn có chắc chắn muốn hủy không?
+          </p>
+          <div className="flex gap-3 w-full">
+            <button
+              onClick={() => {
+                setIsCancelModalOpen(false)
+                setPendingBackStep(null)
+              }}
+              className="flex-1 py-2.5 rounded-full border-2 border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 transition-all cursor-pointer bg-transparent"
+            >
+              Tiếp Tục Chụp
+            </button>
+            <button
+              onClick={confirmCancelAndGoBack}
+              className="flex-1 py-2.5 rounded-full bg-gradient-to-r from-red-500 to-rose-500 text-white font-bold text-sm shadow-lg hover:opacity-90 transition-all cursor-pointer border-0"
+            >
+              Hủy &amp; Quay Lại
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

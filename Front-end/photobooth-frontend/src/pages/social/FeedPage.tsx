@@ -5,30 +5,42 @@ import { PostCard } from '../../components/social/PostCard';
 import { useSocialSocket } from '../../hooks/useSocialSocket';
 import { socialApi } from '../../api/social.api';
 import { useAuthStore } from '../../stores/auth.store';
-import { Spin } from 'antd';
+import { Pagination, Spin } from 'antd';
+
+const PAGE_SIZE = 9;
 
 export default function FeedPage() {
   const token = useAuthStore((state) => state.token);
   const { feed, setFeed, isConnected } = useSocialSocket(token || undefined);
   const [activeTab, setActiveTab] = useState<'all' | 'group' | 'single'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPosts, setTotalPosts] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     async function loadFeed() {
       try {
         setLoading(true);
-        // We fetch the first page.
-        // In real app, we handle pagination (load more) and map filter tab
-        const data = await socialApi.getFeed(1, 20, activeTab === 'all' ? undefined : activeTab);
-        setFeed(data.data || []);
+        const result = await socialApi.getFeed(currentPage, PAGE_SIZE, activeTab === 'all' ? undefined : activeTab);
+        if (!cancelled) {
+          setFeed(result.data || []);
+          setTotalPosts(result.total || 0);
+        }
       } catch (error) {
         console.error('Failed to load feed', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     loadFeed();
-  }, [activeTab, setFeed]);
+    return () => { cancelled = true; };
+  }, [activeTab, currentPage, setFeed]);
+
+  const changeFilter = (tab: 'all' | 'group' | 'single') => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+  };
 
   const stats = {
     rating: 4.9,
@@ -47,7 +59,7 @@ export default function FeedPage() {
           </span>
         </div>
 
-        <FilterTabs active={activeTab} onChange={setActiveTab} />
+        <FilterTabs active={activeTab} onChange={changeFilter} />
 
         {loading ? (
           <div className="flex justify-center py-20">
@@ -61,9 +73,22 @@ export default function FeedPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
-            {feed.map((post) => (
+            {feed.slice(0, PAGE_SIZE).map((post) => (
               <PostCard key={post.id} post={post} />
             ))}
+          </div>
+        )}
+
+        {!loading && totalPosts > PAGE_SIZE && (
+          <div className="mt-8 flex justify-center">
+            <Pagination
+              current={currentPage}
+              pageSize={PAGE_SIZE}
+              total={totalPosts}
+              showSizeChanger={false}
+              onChange={setCurrentPage}
+              aria-label="Phân trang bài đánh giá"
+            />
           </div>
         )}
       </div>

@@ -10,8 +10,8 @@ export default function GroupSizePage() {
   const layouts = getGroupFrameLayouts(draft.maxParticipants);
 
   return (
-    <main className="mx-auto w-full max-w-[1220px] px-4 pb-32 pt-5 md:px-8 md:pt-8">
-      <GroupCaptureProgress activeStep={1} />
+    <main className="mx-auto w-full max-w-[1220px] px-4 pb-32 pt-24 md:px-8 md:pt-28">
+      <GroupCaptureProgress activeStep={1} onStepClick={(idx) => { if (idx === 0) navigate('/group/new'); }} />
       <PackageSelector
         options={layouts}
         initialSelectedId={selectedLayoutId ?? layouts[0]?.id}

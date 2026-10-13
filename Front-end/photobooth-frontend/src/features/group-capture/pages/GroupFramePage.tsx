@@ -79,8 +79,14 @@ export default function GroupFramePage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-[1220px] px-4 pb-32 pt-5 md:px-8 md:pt-8">
-      <GroupCaptureProgress activeStep={2} />
+    <main className="mx-auto w-full max-w-[1220px] px-4 pb-32 pt-24 md:px-8 md:pt-28">
+      <GroupCaptureProgress
+        activeStep={2}
+        onStepClick={(idx) => {
+          if (idx === 0) navigate('/group/new');
+          if (idx === 1) navigate('/group/new/size');
+        }}
+      />
       <header className="mb-7 text-center">
         <Title level={2} className="!mb-2">Bước 3: Chọn style frame</Title>
         <Text type="secondary">Style dành cho {selectedLayout?.title ?? selectedLayoutId} · nhóm {draft.maxParticipants} người</Text>

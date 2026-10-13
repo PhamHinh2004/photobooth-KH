@@ -54,6 +54,9 @@ export class Post {
   comments_count: number;
 
   @Column({ default: 0 })
+  saves_count: number;
+
+  @Column({ default: 0 })
   views_count: number;
 
   @Column({ type: 'enum', enum: PostStatus, default: PostStatus.PUBLISHED })
