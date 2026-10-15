@@ -1,20 +1,16 @@
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth.store'
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1'
+import { API_BASE_URL } from './apiConfig'
 
 const axiosInstance = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_BASE_URL,
   timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 })
 
 // Request interceptor: gắn Bearer token vào mỗi request
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = useAuthStore.getState().token
+    const token = useAuthStore.getState().token || localStorage.getItem('accessToken')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -27,7 +23,8 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const isLoginRequest = error.config?.url?.endsWith('/auth/login')
+    if (error.response?.status === 401 && !isLoginRequest) {
       useAuthStore.getState().logout()
       window.location.href = '/login'
     }

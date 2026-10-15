@@ -18,6 +18,11 @@ export class UpdateCustomerDto {
   @IsString()
   city?: string;
 
+  @ApiPropertyOptional({ example: 'https://cdn.example.com/avatar.jpg' })
+  @IsOptional()
+  @IsString()
+  image?: string;
+
   @ApiPropertyOptional({ enum: Gender })
   @IsOptional()
   @IsEnum(Gender, { message: 'gender không hợp lệ' })

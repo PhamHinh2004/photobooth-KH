@@ -1,15 +1,20 @@
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { ClassSerializerInterceptor, ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
+import express from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    bodyParser: false,
   });
+
+  // Profile avatars are sent as data URLs during development.
+  app.use(express.json({ limit: '5mb' }));
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port') ?? 3000;
@@ -18,14 +23,14 @@ async function bootstrap() {
   const corsOrigin = configService.get<string>('app.corsOrigin') ?? '*';
 
   // Security
-  app.use(helmet());
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
   // Compression
   app.use(compression());
 
   // CORS
   app.enableCors({
-    origin: corsOrigin,
+    origin: true, // Cho phép tất cả các origin để fix lỗi CORS từ frontend
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -48,6 +53,9 @@ async function bootstrap() {
       },
     }),
   );
+
+  // Global Interceptor
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
   // Swagger
   const swaggerConfig = new DocumentBuilder()

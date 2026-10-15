@@ -9,26 +9,32 @@ import { Customer } from '../customers/entities/customer.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { LocalStrategy } from './strategies/local.strategy';
+import { PasswordReset } from './entities/password-reset.entity';
+import { RegistrationOtp } from './entities/registration-otp.entity';
+import { GoogleStrategy } from './strategies/google.strategy';
+import { FacebookStrategy } from './strategies/facebook.strategy';
 
 @Module({
   imports: [
     PassportModule,
-    TypeOrmModule.forFeature([Account, Customer]),
+    TypeOrmModule.forFeature([Account, Customer, PasswordReset, RegistrationOtp]),
     AccountsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
+      // overwrite type JwtModuleOptions because expiresIn is not assignable to type string
       useFactory: (configService: ConfigService): JwtModuleOptions => ({
-        secret: configService.get<string>('jwt.secret') as string,
+        secret:
+          configService.get<string>('jwt.secret') ??
+          'super-secret-change-in-production',
         signOptions: {
-          expiresIn: configService.get('jwt.expiresIn', '7d') as any,
+          expiresIn: (configService.get<string>('jwt.expiresIn') ?? '7d') as any,
         },
       }),
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, LocalStrategy],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, FacebookStrategy],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

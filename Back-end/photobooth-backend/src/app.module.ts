@@ -1,37 +1,43 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
-import { AllExceptionsFilter } from './exception/all-exceptions.filter';
-import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
-import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import mailConfig from './config/mail.config';
+import r2Config from './config/r2.config';
 import { DatabaseModule } from './database/database.module';
-import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { AccountsModule } from './modules/accounts/accounts.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CustomersModule } from './modules/customers/customers.module';
+import { FramesModule } from './modules/frames/frames.module';
+import { PhotosModule } from './modules/photos/photos.module';
+import { StorageModule } from './modules/storage/storage.module';
+import { GifsModule } from './modules/gifs/gifs.module';
+import { RecordingsModule } from './modules/recordings/recordings.module';
+import { SessionResultsModule } from './modules/session-results/session-results.module';
+import { PostsModule } from './modules/posts/posts.module';
+import { CommentsModule } from './modules/comments/comments.module';
+import { SocialModule } from './modules/social/social.module';
+import { RoomsModule } from './modules/rooms/rooms.module';
+import { RedisModule } from './modules/redis/redis.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { ChatboxModule } from './modules/chatbox/chatbox.module';
+import { TypeStylesModule } from './modules/type-styles/type-styles.module';
 
 @Module({
   imports: [
     // Cấu hình env
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, databaseConfig, jwtConfig],
+      load: [appConfig, databaseConfig, jwtConfig, mailConfig, r2Config],
       envFilePath: '.env',
     }),
 
-    // Rate limiting
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000, // 60 giây
-        limit: 100, // tối đa 100 request/60s
-      },
-    ]),
+    // Event Emitter global
+    EventEmitterModule.forRoot(),
 
     // Database
     DatabaseModule,
@@ -40,38 +46,22 @@ import { CustomersModule } from './modules/customers/customers.module';
     AuthModule,
     AccountsModule,
     CustomersModule,
+    FramesModule,
+    PhotosModule,
+    StorageModule,
+    GifsModule,
+    RecordingsModule,
+    SessionResultsModule,
+    PostsModule,
+    CommentsModule,
+    SocialModule,
+    RedisModule,
+    RoomsModule,
+    NotificationsModule,
+    ChatboxModule,
+    TypeStylesModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-
-    // Global Exception Filter
-    {
-      provide: APP_FILTER,
-      useClass: AllExceptionsFilter,
-    },
-
-    // Global JWT Guard
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
-
-    // Global Throttler Guard
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
-
-    // Global Response Interceptor
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: ResponseInterceptor,
-    },
-  ],
+  providers: [AppService],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggerMiddleware).forRoutes('*');
-  }
-}
+export class AppModule {}

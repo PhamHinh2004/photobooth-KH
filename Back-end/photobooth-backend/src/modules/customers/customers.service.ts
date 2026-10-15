@@ -5,11 +5,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not, IsNull } from 'typeorm';
 import { Account } from '../accounts/entities/account.entity';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { Customer } from './entities/customer.entity';
+import { PhotoSession } from './entities/photo-session.entity';
+import { CreatePhotoSessionDto } from './dto/create-photo-session.dto';
+import { GetCustomersQueryDto } from './dto/get-customers-query.dto';
+import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class CustomersService {
@@ -18,6 +22,9 @@ export class CustomersService {
     private readonly customerRepository: Repository<Customer>,
     @InjectRepository(Account)
     private readonly accountRepository: Repository<Account>,
+    @InjectRepository(PhotoSession)
+    private readonly photoSessionRepository: Repository<PhotoSession>,
+    private readonly storageService: StorageService,
   ) {}
 
   /**
@@ -38,6 +45,79 @@ export class CustomersService {
     if (search) {
       query.where(
         'customer.fullName ILIKE :search OR customer.city ILIKE :search OR account.email ILIKE :search',
+        { search: `%${search}%` },
+      );
+    }
+
+    const [data, total] = await query.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getMetrics() {
+    const totalCustomers = await this.customerRepository.count();
+    const linkedAccounts = await this.customerRepository.count({ where: { account: Not(IsNull()) } });
+    
+    // For feedback and returning, we can use simple mock logic or queries if complex
+    // Here we will just provide some calculated stats based on sessions
+    const returnRate = 42.8; // Example static value based on mockup
+    const feedbackRate = 28.5; // Example static value based on mockup
+
+    return {
+      totalCustomers,
+      linkedAccounts,
+      linkedPercentage: totalCustomers ? Math.round((linkedAccounts / totalCustomers) * 100) : 0,
+      feedbackRate,
+      returnRate,
+    };
+  }
+
+  async exportCustomers(queryDto: GetCustomersQueryDto) {
+    const { data } = await this.findAllForAdmin({ ...queryDto, page: 1, limit: 100000 }); // fetch all matching
+    let csv = '\uFEFFID,Họ Tên,Email,Số điện thoại,Giới tính,Thành phố,Đã liên kết\n';
+    for (const c of data) {
+      csv += `${c.id},"${c.fullName}","${c.account?.email || ''}","${c.phone || ''}",${c.gender},"${c.city || ''}",${c.account ? 'Có' : 'Không'}\n`;
+    }
+    return csv;
+  }
+
+  async findAllForAdmin(queryDto: GetCustomersQueryDto) {
+    const { page = 1, limit = 10, search, gender, hasAccount, sortBy = 'createdAt', sortOrder = 'DESC' } = queryDto;
+
+    const query = this.customerRepository
+      .createQueryBuilder('customer')
+      .leftJoinAndSelect('customer.account', 'account')
+      .orderBy(`customer.${sortBy}`, sortOrder.toUpperCase() as 'ASC' | 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (gender) {
+      query.andWhere('customer.gender = :gender', { gender });
+    }
+
+    if (queryDto.city) {
+      query.andWhere('customer.city = :city', { city: queryDto.city });
+    }
+
+    if (hasAccount !== undefined) {
+      if (hasAccount) {
+        query.andWhere('customer.account_id IS NOT NULL');
+      } else {
+        query.andWhere('customer.account_id IS NULL');
+      }
+    }
+
+    if (search) {
+      query.andWhere(
+        '(customer.fullName ILIKE :search OR customer.city ILIKE :search OR account.email ILIKE :search)',
         { search: `%${search}%` },
       );
     }
@@ -82,7 +162,7 @@ export class CustomersService {
    */
   async findByAccountId(accountId: string): Promise<Customer> {
     const customer = await this.customerRepository.findOne({
-      where: { accountId },
+      where: { account: { id: accountId } },
       relations: { account: true },
     });
 
@@ -112,7 +192,7 @@ export class CustomersService {
     }
 
     const existingCustomer = await this.customerRepository.findOne({
-      where: { accountId: dto.accountId },
+      where: { account: { id: dto.accountId } },
     });
 
     if (existingCustomer) {
@@ -122,7 +202,7 @@ export class CustomersService {
     }
 
     const customer = this.customerRepository.create({
-      accountId: dto.accountId,
+      account: { id: dto.accountId },
       fullName: dto.fullName,
       birthday: dto.birthday,
       city: dto.city,
@@ -133,7 +213,7 @@ export class CustomersService {
     return { message: 'Tạo hồ sơ khách hàng thành công' };
   }
 
-  async update(id: string, dto: UpdateCustomerDto): Promise<Customer> {
+  async update(id: string, dto: UpdateCustomerDto, file?: Express.Multer.File): Promise<Customer> {
     const customer = await this.findOne(id);
 
     if (dto.fullName !== undefined) customer.fullName = dto.fullName;
@@ -141,8 +221,71 @@ export class CustomersService {
     if (dto.city !== undefined) customer.city = dto.city;
     if (dto.gender !== undefined) customer.gender = dto.gender;
 
+    // Set is_created to true when updating profile
+    customer.iscreated = true;
+
+    if (file) {
+      const filenameParts = file.originalname.split('.');
+      const ext = filenameParts.length > 1 ? filenameParts.pop()! : 'jpg';
+      const publicUrl = await this.storageService.uploadFile('profile', file.buffer, ext);
+      
+      // Optionally delete old image if it's not a default one
+      if (
+        customer.image &&
+        !customer.image.includes('woman_profile.jpg') &&
+        !customer.image.includes('man_profile.jpg')
+      ) {
+        await this.storageService.deleteFile(customer.image).catch(() => {});
+      }
+      
+      customer.image = publicUrl;
+    } else if (dto.image !== undefined) {
+      customer.image = dto.image;
+    }
+
+    // Apply default image based on gender if image is empty or still using a default one
+    if (
+      !customer.image || 
+      customer.image.includes('woman_profile.jpg') || 
+      customer.image.includes('man_profile.jpg')
+    ) {
+      if (customer.gender === 'female' as any) {
+        customer.image = 'https://pub-4eb303709ef24609a3b420990203812a.r2.dev/profile/woman_profile.jpg';
+      } else {
+        customer.image = 'https://pub-4eb303709ef24609a3b420990203812a.r2.dev/profile/man_profile.jpg';
+      }
+    }
+
     await this.customerRepository.save(customer);
     return this.findOne(id);
+  }
+
+  async updateByAccountId(accountId: string, dto: UpdateCustomerDto, file?: Express.Multer.File): Promise<Customer> {
+    const customer = await this.findByAccountId(accountId);
+    return this.update(customer.id || '', dto, file);
+  }
+
+  async getPhotoHistory(accountId: string, type?: 'solo' | 'group', order: 'newest' | 'oldest' = 'newest') {
+    const query = this.photoSessionRepository
+      .createQueryBuilder('photo')
+      .where('photo.account_id = :accountId', { accountId })
+      .orderBy('photo.created_at', order === 'oldest' ? 'ASC' : 'DESC');
+
+    if (type) query.andWhere('photo.session_type = :type', { type });
+    const photos = await query.getMany();
+    return { data: photos, total: photos.length };
+  }
+
+  async savePhotoSession(accountId: string, dto: CreatePhotoSessionDto) {
+    const photo = this.photoSessionRepository.create({ accountId, ...dto });
+    return this.photoSessionRepository.save(photo);
+  }
+
+  async ensurePhotoSession(accountId: string, dto: CreatePhotoSessionDto) {
+    const existing = await this.photoSessionRepository.findOne({
+      where: { accountId, sessionType: dto.sessionType, imageUrl: dto.imageUrl },
+    });
+    return existing ?? this.savePhotoSession(accountId, dto);
   }
 
   async remove(id: string): Promise<{ message: string }> {

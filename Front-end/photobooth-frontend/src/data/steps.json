@@ -1,0 +1,8 @@
+[
+  { "key": "package-select", "label": "CHỌN GÓI CHỤP", "icon": "📦" },
+  { "key": "frame-select", "label": "CHỌN STYLE KHUNG", "icon": "🎨" },
+  { "key": "capturing", "label": "CHỤP ẢNH", "icon": "📸" },
+  { "key": "review", "label": "REVIEW", "icon": "🔄" },
+  { "key": "filter", "label": "HẬU KỲ", "icon": "✨" },
+  { "key": "result", "label": "NHẬN ẢNH", "icon": "🎁" }
+]

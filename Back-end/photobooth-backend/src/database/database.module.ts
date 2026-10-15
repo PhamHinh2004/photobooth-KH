@@ -7,18 +7,25 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('database.host'),
-        port: configService.get<number>('database.port'),
-        username: configService.get<string>('database.username'),
-        password: configService.get<string>('database.password'),
-        database: configService.get<string>('database.name'),
-        entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-        synchronize: configService.get<boolean>('database.synchronize'),
-        logging: configService.get<boolean>('database.logging'),
-        autoLoadEntities: true,
-      }),
+      useFactory: (configService: ConfigService) => {
+        const db = configService.get('database');
+        return {
+          type: 'postgres',
+          host: db.host,
+          port: db.port,
+          username: db.username,
+          password: db.password,
+          database: db.name,
+          autoLoadEntities: true,
+          synchronize: db.synchronize,
+          logging: db.logging,
+          // SSL Configuration required by Neon
+          ssl: {
+            rejectUnauthorized: false,
+          },
+
+        }
+      },
     }),
   ],
 })

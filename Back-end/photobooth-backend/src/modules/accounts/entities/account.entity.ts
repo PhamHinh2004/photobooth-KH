@@ -6,8 +6,10 @@ import {
   UpdateDateColumn,
   OneToOne,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { Role } from '../../../common/enums/role.enum';
 import { Customer } from '../../customers/entities/customer.entity';
+import { AuthProvider } from '../../../common/enums/auth-provider.enum';
 
 @Entity('accounts')
 export class Account {
@@ -20,7 +22,8 @@ export class Account {
   @Column({ unique: true, type: 'varchar', length: 150 })
   username: string | undefined;
 
-  @Column({ type: 'varchar', length: 255, select: false })
+  @Exclude()
+  @Column({ type: 'varchar', length: 255, select: false, nullable: true })
   password: string | undefined;
 
   @Column({
@@ -32,6 +35,15 @@ export class Account {
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean | undefined;
+
+  @Column({ name: 'auth_provider', type: 'enum', enum: AuthProvider, default: AuthProvider.LOCAL })
+  authProvider: AuthProvider | undefined;
+
+  @Column({ name: 'provider_id', type: 'varchar', length: 255, nullable: true })
+  providerId: string | undefined;
+
+  @Column({ name: 'avatar_url', type: 'text', nullable: true })
+  avatarUrl: string | undefined;
 
   @OneToOne(() => Customer, (customer) => customer.account, { cascade: true })
   customer: Customer | undefined;
