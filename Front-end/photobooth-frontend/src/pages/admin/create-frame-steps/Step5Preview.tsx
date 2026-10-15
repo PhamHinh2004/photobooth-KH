@@ -86,13 +86,22 @@ const Step5Preview: React.FC<Props> = ({ selectedLayout, uploadedImage, frameSty
         useCORS: true,
       });
       
-      const dataUrl = canvas.toDataURL('image/png');
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Không tạo được file ảnh PNG');
+      const filename = `frame_transparent_${selectedLayout}_${new Date().getTime()}.png`;
+      const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = `frame_transparent_${selectedLayout}_${new Date().getTime()}.png`;
+      link.style.display = 'none';
+      link.href = blobUrl;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      setTimeout(() => {
+        try {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        } catch {}
+      }, 60000);
       message.success({ content: 'Đã tải thành công ảnh Frame đục lỗ (PNG trong suốt)!', key: 'downloadImage', duration: 4 });
     } catch (error) {
       console.error(error);
