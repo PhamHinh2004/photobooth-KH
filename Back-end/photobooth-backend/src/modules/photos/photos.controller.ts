@@ -2,14 +2,20 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
+  Delete,
+  Query,
   Param,
+  UploadedFile,
   UploadedFiles,
   UseInterceptors,
   Body,
   BadRequestException,
   NotFoundException,
+  Res,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
 
 import { StorageService } from '../storage/storage.service';
@@ -83,6 +89,95 @@ export class PhotosController {
       file_size_bytes: processedFile.size,
       share_token: crypto.randomUUID(),
     });
+  }
+
+  @Post('frame-asset')
+  @ApiOperation({ summary: 'Upload và lưu ảnh asset trang trí frame vào entity Photo' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFrameAsset(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('name') name?: string,
+    @Body('category') category?: string,
+    @Body('accountId') accountId?: string,
+    @Body('width') width?: string,
+    @Body('height') height?: string,
+    @Body('metadata') metadataStr?: string,
+  ) {
+    if (!file) throw new BadRequestException('Vui lòng chọn file tải lên');
+    const ext = this.extractExt(file.originalname);
+    const fileUrl = await this.storageService.uploadFile('frame-assets', file.buffer, ext);
+
+    let parsedMeta: Record<string, any> = {};
+    if (metadataStr) {
+      try {
+        parsedMeta = JSON.parse(metadataStr);
+      } catch {}
+    }
+
+    const photo = await this.photosService.createFrameAsset({
+      fileUrl,
+      fileName: name || file.originalname.replace(/\.[^/.]+$/, ''),
+      fileSizeBytes: file.size,
+      category: category || 'character',
+      accountId: accountId || null,
+      width: width ? parseInt(width, 10) : null,
+      height: height ? parseInt(height, 10) : null,
+      metadata: parsedMeta,
+    });
+
+    return photo;
+  }
+
+  @Get('frame-assets')
+  @ApiOperation({ summary: 'Lấy danh sách ảnh asset trang trí frame từ entity Photo' })
+  async getFrameAssets(
+    @Query('category') category?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.photosService.getFrameAssets(category, search);
+  }
+
+  @Patch('frame-assets/:id')
+  @ApiOperation({ summary: 'Cập nhật thông tin asset (tên, danh mục)' })
+  async updateFrameAsset(
+    @Param('id') id: string,
+    @Body() dto: { title?: string; asset_category?: string; metadata?: Record<string, any> },
+  ) {
+    return this.photosService.updateFrameAsset(id, dto);
+  }
+
+  @Delete('frame-assets/:id')
+  @ApiOperation({ summary: 'Xóa asset khỏi entity Photo' })
+  async deleteFrameAsset(@Param('id') id: string) {
+    return this.photosService.deleteFrameAsset(id);
+  }
+
+  @Get('proxy-image')
+  @ApiOperation({ summary: 'Proxy ảnh để đảm bảo CORS an toàn cho Canvas export' })
+  async proxyImage(@Query('url') imageUrl: string, @Res() res: Response) {
+    if (!imageUrl) {
+      throw new BadRequestException('Vui lòng cung cấp url ảnh');
+    }
+
+    try {
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        return res.status(response.status).send(`Failed to fetch image: ${response.statusText}`);
+      }
+
+      const contentType = response.headers.get('content-type') || 'image/png';
+      const arrayBuf = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuf);
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.send(buffer);
+    } catch (err: any) {
+      return res.status(400).send(`Proxy error: ${err.message}`);
+    }
   }
 
   @Get(':id')

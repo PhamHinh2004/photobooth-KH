@@ -16,6 +16,7 @@ import CustomersPage from '../pages/admin/CustomersPage'
 import CustomerDetailPage from '../pages/admin/CustomerDetailPage'
 import ReviewsPage from '../pages/admin/ReviewsPage'
 import CreateFramePage from '../pages/admin/CreateFramePage'
+import FrameEditorPage from '../pages/admin/frame-editor/FrameEditorPage'
 import TypeStylesPage from '../pages/admin/TypeStylesPage'
 import TypeStyleDetailPage from '../pages/admin/TypeStyleDetailPage'
 import CapturePage from '../pages/capture/CapturePage'
@@ -78,6 +79,10 @@ const routes: RouteObject[] = [
       {
         path: 'create-frame',
         element: <CreateFramePage />,
+      },
+      {
+        path: 'frame-editor',
+        element: <FrameEditorPage />,
       },
       {
         path: 'accounts',

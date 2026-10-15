@@ -23,7 +23,7 @@ async function bootstrap() {
   const corsOrigin = configService.get<string>('app.corsOrigin') ?? '*';
 
   // Security
-  app.use(helmet());
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
   // Compression
   app.use(compression());

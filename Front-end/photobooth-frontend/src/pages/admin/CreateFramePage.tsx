@@ -4,8 +4,10 @@ import {
   ArrowRightOutlined,
   ArrowLeftOutlined,
   CheckOutlined,
-  SaveOutlined
+  SaveOutlined,
+  FormatPainterOutlined
 } from '@ant-design/icons';
+import { Link } from 'react-router-dom';
 import Step1TypeSelection from './create-frame-steps/Step1TypeSelection';
 import Step2SoloLayout from './create-frame-steps/Step2SoloLayout';
 import Step2GroupLayout from './create-frame-steps/Step2GroupLayout';
@@ -110,6 +112,12 @@ const CreateFramePage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Tạo Frame Mới</h1>
         </div>
+        <Link
+          to="/admin/frame-editor"
+          className="flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-r from-[#d81e69] to-[#ff7a45] text-white text-sm font-semibold shadow-md hover:opacity-90 transition-opacity"
+        >
+          <FormatPainterOutlined /> Thiết kế bằng Canvas
+        </Link>
       </div>
 
       <div className="p-6 flex-1 overflow-auto bg-gray-50/30">

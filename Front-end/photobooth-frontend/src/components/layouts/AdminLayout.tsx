@@ -10,6 +10,7 @@ import {
   StarOutlined,
   PictureOutlined,
   TagsOutlined,
+  FormatPainterOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '@/stores/auth.store'
 import { Dropdown } from 'antd'
@@ -44,6 +45,12 @@ const AdminLayout = () => {
       icon: <PictureOutlined />,
       label: 'Tạo Frame Mới',
       path: '/admin/create-frame',
+    },
+    {
+      key: 'frame-editor',
+      icon: <FormatPainterOutlined />,
+      label: 'Thiết kế Frame (Canvas)',
+      path: '/admin/frame-editor',
     },
     {
       key: 'type-styles',
